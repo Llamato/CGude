@@ -144,18 +144,7 @@ public:
     GL(glEnable(GL_DEPTH_TEST));
 
     const OBJFile m{"bunny.obj", true};
-
-    // TODO:
-    // Replace this example block of code  by your code to
-    // convert the shared vertex representation in the object m
-    // by an explicit representation, indices are stored in
-    // the stl-vector m.indices the vertex positions are stored
-    // in m.vertices and the normals are stored in m.normals.
-    // As color you can choose whatever you like
-
     writeObjData(m, getTransgenderColors());
-
-    // example block end
   }
   
   virtual void animate(double animationTime) override {
@@ -168,8 +157,23 @@ public:
     drawTriangles(data, TrisDrawType::LIST, false, true);
   }
   
+  const unsigned int ACTIVE_MODEL_BUNNY = 0;
+  const unsigned int ACTIVE_MODEL_CUBE = 1; 
+  bool activeModel = ACTIVE_MODEL_BUNNY;
   virtual void keyboardChar(unsigned int key) override {
-    // TODO check for keystrokes here
+    const unsigned int KEYCODE_SPACE = 32;
+    if(key != KEYCODE_SPACE) return;
+    if(activeModel == ACTIVE_MODEL_CUBE){
+      activeModel = ACTIVE_MODEL_BUNNY;
+      data.clear();
+      const OBJFile m{"bunny.obj", true};
+      writeObjData(m, getTransgenderColors());
+    }else{
+      activeModel = ACTIVE_MODEL_CUBE;
+      data.clear();
+      const OBJFile m{"cube.obj", true};
+      writeObjData(m, getCheckerboardColors());
+    }
   }
 
 
