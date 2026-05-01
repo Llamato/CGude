@@ -8,26 +8,43 @@ public:
   
   MyGLApp() : GLApp{1024,1024,1,"Intersection Demo"} {}
     
-  std::optional<Vec3> raySphereIntersect(const Vec3& sphereCenter,
-                                         const float& radius,
-                                         const Vec3& rayOrigin,
-                                         const Vec3& pixelPos) {
+  std::optional<Vec3> raySphereIntersect(const Vec3& sphereCenter, const float& radius, const Vec3& rayOrigin, const Vec3& pixelPos) {
     // TODO:
     // Implement a ray/sphere intersection here
     // the sphere is given as sphereCenter and
     // radius, the ray starts at rayOrigin and
     // passes through pixelPos. If no interscation
     // is found, simply return {} otherwise return
-    // the interscetion position
+    // the intersection position
     // If the function works correctly, you should
     // see a glossy red sphere, illuminated from
     // the top front
-    
+
+    float x_1 = rayOrigin.x;
+    float y_1 = rayOrigin.y;
+    float z_1 = rayOrigin.z;
+    float x_2 = pixelPos.x;
+    float y_2 = pixelPos.y;
+    float z_2 = pixelPos.z;
+    float x_3 = sphereCenter.x;
+    float y_3 = sphereCenter.y;
+    float z_3 = sphereCenter.z;
+    float r = radius;
+    float a = pow(x_2 - x_1, 2) + pow(y_2 - y_1, 2) + pow(z_2+z_1, 2);
+    float b = 2 * ((x_2 - x_1) * (x_1 - x_3) + (y_2 - y_1) * (y_1 - y_3) + (z_2 - z_1) * (z_1 - z_3));
+    float c = pow(x_3, 2) + pow(y_3, 2) + pow(z_3, 2) + pow(x_1, 2) + pow(y_1, 2) + pow(z_1, 2) - 2 * (x_3 * x_1 + y_3 * y_1 + z_3 * z_1) - pow(r, 2);
+    bool isIntersecting = pow(b, 2) - 4 * a * c >= 0;
+    if(isIntersecting){
+      float u = -b/(2 * a);
+      float x = x_1 + u * (x_2 - x_1);
+      float y = y_1 + u * (y_2 - y_1);
+      float z = z_1 + u * (z_2 - z_1);
+      return Vec3{x, y, z};
+    }
     return {};
   }
   
-  Vec3 computeLighting(const Vec3& rayOrigin, const Vec3& lightPos, const Vec3& intersectionPoint, const Vec3& normal,
-                       const Vec3& specularColor, const Vec3& diffuseColor, const Vec3& ambientColor) {
+  Vec3 computeLighting(const Vec3& rayOrigin, const Vec3& lightPos, const Vec3& intersectionPoint, const Vec3& normal, const Vec3& specularColor, const Vec3& diffuseColor, const Vec3& ambientColor) {
     const Vec3 viewDir  = Vec3::normalize(rayOrigin-intersectionPoint);
     const Vec3 lightDir = Vec3::normalize(lightPos-intersectionPoint);
     const Vec3 reflectedDir = normal * 2.0f * Vec3::dot(normal, lightDir) - lightDir;

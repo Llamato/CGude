@@ -6,7 +6,6 @@ class MyGLApp : public GLApp {
 public:
   double angle{0.0};
   std::vector<float> data;
-  
   MyGLApp() : GLApp{640,480,1,"Shared vertices to explicit representation demo"} {}
   
   virtual void init() override {
