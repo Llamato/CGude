@@ -7,7 +7,9 @@ public:
   Image image{1024,1024};
   
   MyGLApp() : GLApp{1024,1024,1,"Intersection Demo"} {}
-    
+  
+
+
   std::optional<Vec3> raySphereIntersect(const Vec3& sphereCenter, const float& radius, const Vec3& rayOrigin, const Vec3& pixelPos) {
     // TODO:
     // Implement a ray/sphere intersection here
@@ -30,16 +32,20 @@ public:
     float y_3 = sphereCenter.y;
     float z_3 = sphereCenter.z;
     float r = radius;
-    float a = pow(x_2 - x_1, 2) + pow(y_2 - y_1, 2) + pow(z_2+z_1, 2);
+    float a = pow(x_2 - x_1, 2) + pow(y_2 - y_1, 2) + pow(z_2 - z_1, 2);
     float b = 2 * ((x_2 - x_1) * (x_1 - x_3) + (y_2 - y_1) * (y_1 - y_3) + (z_2 - z_1) * (z_1 - z_3));
     float c = pow(x_3, 2) + pow(y_3, 2) + pow(z_3, 2) + pow(x_1, 2) + pow(y_1, 2) + pow(z_1, 2) - 2 * (x_3 * x_1 + y_3 * y_1 + z_3 * z_1) - pow(r, 2);
-    bool isIntersecting = pow(b, 2) - 4 * a * c >= 0;
-    if(isIntersecting){
-      float u = -b/(2 * a);
-      float x = x_1 + u * (x_2 - x_1);
-      float y = y_1 + u * (y_2 - y_1);
-      float z = z_1 + u * (z_2 - z_1);
-      return Vec3{x, y, z};
+    float isIntersecting = pow(b, 2) - 4 * a * c ;
+    if(isIntersecting >= 0){
+      float intersectionPoint1 = (-b - sqrt(isIntersecting)) / (2 * a);
+      float intersectionPoint2 = (-b + sqrt(isIntersecting)) / (2 * a);
+      Vec3 rayDirection = pixelPos - rayOrigin;
+      float pointOfClosestIntersection;
+      if(intersectionPoint1 < 0) pointOfClosestIntersection = intersectionPoint2;
+      else if(intersectionPoint2 < 0) pointOfClosestIntersection = intersectionPoint1;
+      else if(intersectionPoint1 < intersectionPoint2) pointOfClosestIntersection = intersectionPoint1;
+      else pointOfClosestIntersection = intersectionPoint2;
+      return rayOrigin + rayDirection * pointOfClosestIntersection;
     }
     return {};
   }
