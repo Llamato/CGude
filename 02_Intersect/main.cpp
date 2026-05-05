@@ -9,14 +9,79 @@ public:
   MyGLApp() : GLApp{1024,1024,1,"Intersection Demo"} {}
 
   struct PolarVector2 {
-    float radius;
-    float angle; 
+    float radius, angle; 
   };
 
   struct Light {
     struct PolarVector2 position;
     Vec3 diffuseColor;
   };
+
+  struct Polygon {
+    Vec3 aVertex, bVertex, cVertex;
+  };
+
+  struct Mat2 {
+    float a, b, c, d;
+  };
+
+  float determinant2x2(const struct Mat2& matrix) {
+    return matrix.a * matrix.d - matrix.b * matrix.c;
+  }
+
+  struct Mat2 scale2x2(const float scaler, const struct Mat2& matrix) {
+    struct Mat2 result = {
+      scaler * matrix.a, scaler * matrix.b,
+      scaler * matrix.c, scaler * matrix.d
+    };
+    return result;
+  }
+
+  struct Mat2 invert2x2(const struct Mat2& matrix) {
+    struct Mat2 inverseMatrix = {matrix.d, -matrix.b, -matrix.c, matrix.a};
+    return scale2x2(1/determinant2x2(matrix), inverseMatrix);
+  }
+
+  Vec2 multiplyVec2WithMat2(const Vec2 vector, const struct Mat2 matrix) {
+    return Vec2{
+      matrix.a * vector.x + matrix.b * vector.y, 
+      matrix.c * vector.x + matrix.d * vector.y
+    };
+  }
+
+  Vec3 convertCartesianToBarycentric(struct Polygon& polygon, const Vec3& cartesian) {
+    //Project Triangle into polygon plane
+    const Vec3 localOrigin = polygon.aVertex;
+    const Vec3 planeNormal = Vec3::cross(polygon.bVertex - localOrigin, polygon.cVertex - localOrigin);
+    const Vec3 xAxisUnit = Vec3::normalize(polygon.bVertex - localOrigin);
+    const Vec3 yAxisUnit = Vec3::normalize(Vec3::cross(planeNormal, xAxisUnit));
+    const Vec2 localA = {0.0f, 0.0f};
+    const Vec2 localB = {Vec3::dot(polygon.bVertex - localOrigin, xAxisUnit), Vec3::dot(polygon.bVertex - localOrigin, yAxisUnit)};
+    const Vec2 localC = {Vec3::dot(polygon.cVertex - localOrigin, xAxisUnit), Vec3::dot(polygon.cVertex - localOrigin, yAxisUnit)};
+
+    //Project cartesian Point into polygon plane
+    const Vec2 localCartesian = {Vec3::dot(cartesian - localOrigin, xAxisUnit), Vec3::dot(cartesian - localOrigin, yAxisUnit)};
+
+    //Compute 2d Barycentric coordinates
+    const struct Mat2 cbLinearTransform = {
+      localB.x - localA.x, localC.x - localA.x,
+      localB.y - localA.y, localC.y - localA.y
+    };
+    const struct Mat2 bcLinearTransform = invert2x2(cbLinearTransform);
+    const Vec2 betaGamma = multiplyVec2WithMat2(localCartesian, bcLinearTransform);
+    const float beta = betaGamma.x;
+    const float gamma = betaGamma.y;
+    const float alpha = 1.0f - beta - gamma;
+    return Vec3{alpha, beta, gamma};
+  }
+
+  Vec3 convertBarycentricToCartesian(struct Polygon& polygon, const Vec3& barycentric) {
+    return Vec3{
+      barycentric.x * polygon.aVertex.x + barycentric.y * polygon.bVertex.x + barycentric.z * polygon.cVertex.x,
+      barycentric.x * polygon.aVertex.y + barycentric.y * polygon.bVertex.y + barycentric.z * polygon.cVertex.y,
+      barycentric.x * polygon.aVertex.z + barycentric.y * polygon.bVertex.z + barycentric.z * polygon.cVertex.z
+    };
+  }
 
   const Vec3 sphereCenter{0.0f, 0.0f, -4.0f};
   const float radius = 2.0f;
@@ -39,17 +104,17 @@ public:
     return Vec3{relativeR, relativeG, relativeB};
   }
 
-  Vec2 convertPolarToCatesian(const struct PolarVector2 polarVector) {
-    Vec2 catesianVector;
-    catesianVector.x = polarVector.radius * cosf(polarVector.angle);
-    catesianVector.y = polarVector.radius * sinf(polarVector.angle);
-    return catesianVector;
+  Vec2 convertPolarToCartesian(const struct PolarVector2& polarVector) {
+    Vec2 CartesianVector;
+    CartesianVector.x = polarVector.radius * cosf(polarVector.angle);
+    CartesianVector.y = polarVector.radius * sinf(polarVector.angle);
+    return CartesianVector;
   }
 
-  struct PolarVector2 convertCatesianToPolar(const Vec2 catesianVector) {
+  struct PolarVector2 convertCartesianToPolar(const Vec2 CartesianVector) {
     struct PolarVector2 polarVector;
-    polarVector.radius = sqrt(pow(catesianVector.x, 2) + pow(catesianVector.y, 2));
-    polarVector.angle = atan2(catesianVector.y, catesianVector.x);
+    polarVector.radius = sqrt(pow(CartesianVector.x, 2) + pow(CartesianVector.y, 2));
+    polarVector.angle = atan2(CartesianVector.y, CartesianVector.x);
     return polarVector;
   }
 
@@ -125,7 +190,7 @@ public:
             const float specularRatio = 0.0f;
             const Vec3 ambiantLightColor = currentLight.diffuseColor * ambiantRatio;
             const Vec3 specularReflectionColor = Vec3{1.0f,1.0f,1.0f} * specularRatio;
-            color = color + computeLighting(rayOrigin, {convertPolarToCatesian(currentLight.position), lightRingHeight}, *intersection, normal, specularReflectionColor, currentLight.diffuseColor, ambiantLightColor);
+            color = color + computeLighting(rayOrigin, {convertPolarToCartesian(currentLight.position), lightRingHeight}, *intersection, normal, specularReflectionColor, currentLight.diffuseColor, ambiantLightColor);
           }
         };
         image.setNormalizedValue(x,y,0,color.r);
@@ -140,7 +205,7 @@ public:
     GL(glDisable(GL_CULL_FACE));
     GL(glClearColor(0,0,0,0));
 
-    const struct Light keyLight = {convertCatesianToPolar(Vec2{0.0f,4.0f}), Vec3{1.0f, 1.0f, 1.0f}};
+    const struct Light keyLight = {convertCartesianToPolar(Vec2{0.0f,4.0f}), Vec3{1.0f, 1.0f, 1.0f}};
     const struct Light fillLight = {{keyLight.position.radius, 0.0f}, convertHtmlColorToOpenGlColor("#5BCFFA")};
     const struct Light rimLight = {{keyLight.position.radius, 0.0f}, convertHtmlColorToOpenGlColor("#F5A9B8")};
     lights = {keyLight, fillLight, rimLight};
