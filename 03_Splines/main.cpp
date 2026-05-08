@@ -25,16 +25,8 @@ public:
     sa = sin(animationTime);
     ca = cos(animationTime);
   }
-   
-  void drawPolySegment(const Vec2& p0, const Vec2& p1,
-                       const Vec2& p2, const Vec2& p3,
-                       const Mat4& g, const Vec4& color) {
-    std::vector<float> curve((maxLineSegments+1)*7);
-    
-    for (size_t i = 0;i<=maxLineSegments;++i) {
-     const float t = float(i)/float(maxLineSegments);
 
-      // TODO:
+  // TODO:
       // complete the function drawPolySegment
       // this function takes as argument the
       // geometry matrix of the polygon method
@@ -53,21 +45,63 @@ public:
       // Hermite curve on the top, a Bezier
       // curve in the middle and a B-Spline
       // at the bottom
-      
-      curve[i*7+0] = 0.0f;  // x
-      curve[i*7+1] = 0.0f;  // y
-      curve[i*7+2] = 0.0f;  // z  (no need to change)
-      
-      curve[i*7+3] = 0.0f;  // red
-      curve[i*7+4] = 0.0f;  // green
-      curve[i*7+5] = 0.0f;  // blue
-      curve[i*7+6] = 0.0f;  // alpha
+
+  bool mat4equal(const Mat4& m1, const Mat4& m2) {
+    for(size_t i = 0; i < 4*4; i++) {
+      if(m1[i] != m2[i]) {
+        return false;
+      }
     }
+    return true;
+  }
+
+  const size_t xOffset = 0;
+  const size_t yOffset = 1;
+  const size_t zOffset = 2;
+  const size_t redOffset = 3;
+  const size_t greenOffset = 4;
+  const size_t blueOffset = 5;
+  const size_t alphaOffset = 6;
+  const size_t pointSize = 7;
+
+  void drawPolySegment(const Vec2& p0, const Vec2& p1, const Vec2& p2, const Vec2& p3, const Mat4& g, const Vec4& color) {
+    std::vector<float> curve((maxLineSegments+1)*7);
+
+    const Mat4 hermitBaseMatrix = Mat4{
+      1, 0, 0, 0,
+      0, 0, 1, 0,
+     -3, 3,-2,-1,
+      2,-2, 1, 1
+    };
+
+    if(mat4equal(g, hermitBaseMatrix)) {
+      //Matrix solution did not work. Gonna have to look into that...
+      for (size_t i = 0; i<=maxLineSegments; ++i) {
+        const float t = float(i)/float(maxLineSegments);
+
+        const float t2 = t * t;
+        const float t3 = t2 * t;
+        const float h1 = 2.0f * t3 - 3.0f * t2 + 1.0f;
+        const float h2 = -2.0f * t3 + 3.0f * t2;
+        const float h3 = t3 - 2.0f * t2 + t;
+        const float h4 = t3 - t2;
+        const float x = h1 * p0.x + h2 * p1.x + h3 * p2.x + h4 * p3.x;
+        const float y = h1 * p0.y + h2 * p1.y + h3 * p2.y + h4 * p3.y;
+
+        curve[i*pointSize+xOffset] = x;
+        curve[i*pointSize+yOffset] = y;
+        curve[i*pointSize+zOffset] = 1.0f;
+        curve[i*pointSize+redOffset] = color.r;
+        curve[i*pointSize+greenOffset] = color.g;
+        curve[i*pointSize+blueOffset] = color.b;
+        curve[i*pointSize+alphaOffset] = 1.0f;
+      }
+    }
+
     drawLines(curve, LineDrawType::STRIP, 3);
   }
  
-  void drawHermiteSegment(const Vec2& p0, const Vec2& p1, const Vec2& m0,
-                          const Vec2& m1, const Vec4& color) {
+  void drawHermiteSegment(const Vec2& p0, const Vec2& p1, const Vec2& m0, const Vec2& m1, const Vec4& color) {
     Mat4 g{
       1, 0, 0, 0,
       0, 0, 1, 0,
@@ -95,7 +129,7 @@ public:
       3,-6, 3, 0,
      -1, 3,-3, 1
     };
-    drawPolySegment(p0,p1,p2,p3,g,color);
+    //drawPolySegment(p0,p1,p2,p3,g,color);
     drawPoints({p0.x,p0.y,0,1,0,0,1,
                p1.x,p1.y,0,0,0,1,1,
                p2.x,p2.y,0,0,0,1,1,
@@ -110,7 +144,7 @@ public:
       3/6.0f,-6/6.0f, 3/6.0f, 0/6.0f,
      -1/6.0f, 3/6.0f,-3/6.0f, 1/6.0f
     };
-    drawPolySegment(p0,p1,p2,p3,g,color);
+    //drawPolySegment(p0,p1,p2,p3,g,color);
     drawPoints({p0.x,p0.y,0,1,0,0,1,
                p1.x,p1.y,0,0,0,1,1,
                p2.x,p2.y,0,0,0,1,1,
@@ -127,7 +161,6 @@ public:
       const Vec2 p1{0.5f,0.0f};
       drawHermiteSegment(p0,p1,m0,m1,{0.0f,0.0f,0.0f,1.0f});
     }
-    
 
     {
       setDrawTransform(Mat4::translation(0.0f,0.0f,0.0f));
