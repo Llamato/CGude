@@ -29,7 +29,7 @@ public:
 #else
   GLEnv(uint32_t w, uint32_t h, uint32_t s, const std::string& title,
         bool fpsCounter=false, bool sync=true, bool exactPixels=false,
-        int major=4, int minor=1, bool core=false);
+        int major=3, int minor=0, bool core=false);
 #endif
 
   ~GLEnv();
