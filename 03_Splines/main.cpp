@@ -26,6 +26,23 @@ public:
     ca = cos(animationTime);
   }
 
+
+  //Debug Functions
+  void printVec2(const Vec2& vec) {
+    printf("Vec2{%f, %f}\n", vec.x, vec.y);
+  }
+
+  void printMat4(const Mat4& mat) {
+    for(size_t currentElement = 0; currentElement < 4*4; currentElement++) {
+      if(currentElement % 4 == 0) {
+        std::cout << '\n';
+      }
+      std::cout << mat[currentElement] << '\t';
+    }
+  }
+
+
+
   // TODO:
       // complete the function drawPolySegment
       // this function takes as argument the
@@ -55,6 +72,15 @@ public:
     return true;
   }
 
+  int factorial(const int n) {
+    if(n <= 1) return 1;
+    return n * factorial(n-1);
+  }
+
+  double binomialCoefficient(const int n, const int k) {
+    return factorial(n) / (factorial(k) * factorial(n - k));
+  }
+
   const size_t xOffset = 0;
   const size_t yOffset = 1;
   const size_t zOffset = 2;
@@ -72,6 +98,13 @@ public:
       0, 0, 1, 0,
      -3, 3,-2,-1,
       2,-2, 1, 1
+    };
+
+    const Mat4 bezierBaseMatrix{
+      1, 0, 0, 0,
+     -3, 3, 0, 0,
+      3,-6, 3, 0,
+     -1, 3,-3, 1
     };
 
     if(mat4equal(g, hermitBaseMatrix)) {
@@ -95,6 +128,27 @@ public:
         curve[i*pointSize+greenOffset] = color.g;
         curve[i*pointSize+blueOffset] = color.b;
         curve[i*pointSize+alphaOffset] = 1.0f;
+      }
+    }else if(mat4equal(g, bezierBaseMatrix)) {
+      const std::vector<Vec2> controlPoints = {p0, p1, p2, p3};
+
+      for (size_t currentSegment = 0; currentSegment <= maxLineSegments; ++currentSegment) {
+        const float t = float(currentSegment)/float(maxLineSegments);
+        const int controlPointCount = controlPoints.size();
+        const int n = controlPointCount -1;
+        Vec2 currentLinePoint = Vec2{0.0, 0.0};
+        for(int i = 0; i < controlPointCount; i++) {
+          const Vec2 currentComponent = binomialCoefficient(n, i) * pow(t, i) * pow(1 - t, n - i) * controlPoints[i];
+          currentLinePoint = currentLinePoint + currentComponent;
+        }
+
+        curve[currentSegment*pointSize+xOffset] = currentLinePoint.x;
+        curve[currentSegment*pointSize+yOffset] = currentLinePoint.y;
+        curve[currentSegment*pointSize+zOffset] = 1.0f;
+        curve[currentSegment*pointSize+redOffset] = color.r;
+        curve[currentSegment*pointSize+greenOffset] = color.g;
+        curve[currentSegment*pointSize+blueOffset] = color.b;
+        curve[currentSegment*pointSize+alphaOffset] = 1.0f;
       }
     }
 
@@ -129,7 +183,7 @@ public:
       3,-6, 3, 0,
      -1, 3,-3, 1
     };
-    //drawPolySegment(p0,p1,p2,p3,g,color);
+    drawPolySegment(p0,p1,p2,p3,g,color);
     drawPoints({p0.x,p0.y,0,1,0,0,1,
                p1.x,p1.y,0,0,0,1,1,
                p2.x,p2.y,0,0,0,1,1,
@@ -144,7 +198,7 @@ public:
       3/6.0f,-6/6.0f, 3/6.0f, 0/6.0f,
      -1/6.0f, 3/6.0f,-3/6.0f, 1/6.0f
     };
-    //drawPolySegment(p0,p1,p2,p3,g,color);
+    drawPolySegment(p0,p1,p2,p3,g,color);
     drawPoints({p0.x,p0.y,0,1,0,0,1,
                p1.x,p1.y,0,0,0,1,1,
                p2.x,p2.y,0,0,0,1,1,
