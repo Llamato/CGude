@@ -26,7 +26,6 @@ public:
     ca = cos(animationTime);
   }
 
-
   //Debug Functions
   void printVec2(const Vec2& vec) {
     printf("Vec2{%f, %f}\n", vec.x, vec.y);
@@ -41,9 +40,7 @@ public:
     }
   }
 
-
-
-  // TODO:
+  // Completed:
       // complete the function drawPolySegment
       // this function takes as argument the
       // geometry matrix of the polygon method
@@ -81,6 +78,10 @@ public:
     return factorial(n) / (factorial(k) * factorial(n - k));
   }
 
+  Vec2 lerp(const Vec2& from, const Vec2& to, const float at) {
+    return (1 - at) * from + at * to;
+  }
+
   const size_t xOffset = 0;
   const size_t yOffset = 1;
   const size_t zOffset = 2;
@@ -105,6 +106,13 @@ public:
      -3, 3, 0, 0,
       3,-6, 3, 0,
      -1, 3,-3, 1
+    };
+
+    const Mat4 nullMatrix{
+      0, 0, 0, 0,
+      0, 0, 0, 0,
+      0, 0, 0, 0,
+      0, 0, 0, 0
     };
 
     if(mat4equal(g, hermitBaseMatrix)) {
@@ -150,8 +158,29 @@ public:
         curve[currentSegment*pointSize+blueOffset] = color.b;
         curve[currentSegment*pointSize+alphaOffset] = 1.0f;
       }
-    }
+    }else if(mat4equal(g, nullMatrix)) {
+      for (size_t i = 0; i<=maxLineSegments; ++i) {
+        const float t = float(i)/float(maxLineSegments);
 
+        std::vector<Vec2> controlPoints = {p0, p1, p2, p3};
+        while(controlPoints.size() > 1) {
+          std::vector<Vec2> lerpPoints;
+          for(size_t currentControlPoint = 0; currentControlPoint < controlPoints.size() -1; currentControlPoint++) {
+            const size_t nextControlPoint = currentControlPoint +1;
+            lerpPoints.push_back(lerp(controlPoints[currentControlPoint], controlPoints[nextControlPoint], t));
+          }
+          controlPoints = lerpPoints;
+        }
+        const Vec2 currentLinePoint = controlPoints[0];
+        curve[i*pointSize+xOffset] = currentLinePoint.x;
+        curve[i*pointSize+yOffset] = currentLinePoint.y;
+        curve[i*pointSize+zOffset] = 1.0f;
+        curve[i*pointSize+redOffset] = color.r;
+        curve[i*pointSize+greenOffset] = color.g;
+        curve[i*pointSize+blueOffset] = color.b;
+        curve[i*pointSize+alphaOffset] = 1.0f;
+      }
+    }
     drawLines(curve, LineDrawType::STRIP, 3);
   }
  
@@ -168,15 +197,23 @@ public:
                p1.x+m1.x,p1.y+m1.y,0,0,0,1,1,
                p1.x,p1.y,0,1,0,0,1}, 20, true);
   }
-  
-  void drawBezierSegmentDeCasteljau(const Vec2& p0, const Vec2& p1,
-                                    const Vec2& p2, const Vec2& p3,
-                                    const Vec4& color) {
+
+  void drawBezierSegmentDeCasteljau(const Vec2& p0, const Vec2& p1, const Vec2& p2, const Vec2& p3, const Vec4& color) {
     // TODO SOLUTION 2:
+    Mat4 g{
+      0, 0, 0, 0,
+      0, 0, 0, 0,
+      0, 0, 0, 0,
+      0, 0, 0, 0
+    };
+    drawPolySegment(p0, p1, p2, p3, g, color);
+    drawPoints({p0.x,p0.y,0,1,0,0,1,
+               p1.x,p1.y,0,0,0,1,1,
+               p2.x,p2.y,0,0,0,1,1,
+               p3.x,p3.y,0,1,0,0,1}, 20, true);
   }
 
-  void drawBezierSegment(const Vec2& p0, const Vec2& p1, const Vec2& p2,
-                         const Vec2& p3, const Vec4& color) {
+  void drawBezierSegment(const Vec2& p0, const Vec2& p1, const Vec2& p2, const Vec2& p3, const Vec4& color) {
     Mat4 g{
       1, 0, 0, 0,
      -3, 3, 0, 0,
