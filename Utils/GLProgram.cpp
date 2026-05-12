@@ -9,7 +9,7 @@ std::string GLProgram::shaderPreamble;
 
 static std::string defaultShaderPreamble() {
 #ifndef __EMSCRIPTEN__
-  const std::string s = "#version 410\n";
+  const std::string s = "#version 330\n";
 #else
   const std::string s =
   "#version 300 es\n"

@@ -6,7 +6,6 @@
 #include <sstream>
 #include <string>
 
-
 #ifndef __EMSCRIPTEN__
 GLApp* GLApp::staticAppPtr = nullptr;
 #endif
@@ -19,7 +18,7 @@ GLApp::GLApp(uint32_t w, uint32_t h, uint32_t s,
 #ifdef __EMSCRIPTEN__
 glEnv{w,h,s,title,fpsCounter,sync,exactPixels,3,0,true,},
 #else
-glEnv{w,h,s,title,fpsCounter,sync,exactPixels,4,1,true},
+glEnv{w,h,s,title,fpsCounter,sync,exactPixels,3,3,true},
 #endif
 p{},
 mv{},
