@@ -3,6 +3,7 @@
 #include <Vec2.h>
 #include <Vec4.h>
 #include <Mat4.h>
+#include <cassert>
 
 class MyGLApp : public GLApp {
 public:
@@ -82,6 +83,15 @@ public:
     return (1 - at) * from + at * to;
   }
 
+  float coxDeBoor(const std::vector<float>& knots, const size_t i, const size_t k, const float t) {
+    if(k == 0) {
+      return (knots[i] <= t && t < knots[i+1]) ? 1.0f : 0.0f;
+    }
+    float d1 = knots[i+k] - knots[i];
+    float d2 = knots[i+k+1] - knots[i+1];
+    return (d1 == 0 ? 0 : (t - knots[i]) / d1) * coxDeBoor(knots, i, k-1, t) + (d2 == 0 ? 0 : (knots[i+k+1] - t) / d2) * coxDeBoor(knots, i+1, k-1, t);
+  }
+
   const size_t xOffset = 0;
   const size_t yOffset = 1;
   const size_t zOffset = 2;
@@ -94,7 +104,7 @@ public:
   void drawPolySegment(const Vec2& p0, const Vec2& p1, const Vec2& p2, const Vec2& p3, const Mat4& g, const Vec4& color) {
     std::vector<float> curve((maxLineSegments+1)*7);
 
-    const Mat4 hermitBaseMatrix = Mat4{
+    const Mat4 hermitBaseMatrix{
       1, 0, 0, 0,
       0, 0, 1, 0,
      -3, 3,-2,-1,
@@ -106,6 +116,13 @@ public:
      -3, 3, 0, 0,
       3,-6, 3, 0,
      -1, 3,-3, 1
+    };
+
+    const Mat4 bSplineBaseMatrix{
+      1/6.0f, 4/6.0f, 1/6.0f, 0/6.0f,
+     -3/6.0f, 0/6.0f, 3/6.0f, 0/6.0f,
+      3/6.0f,-6/6.0f, 3/6.0f, 0/6.0f,
+     -1/6.0f, 3/6.0f,-3/6.0f, 1/6.0f
     };
 
     const Mat4 nullMatrix{
@@ -171,9 +188,38 @@ public:
           }
           controlPoints = lerpPoints;
         }
-        const Vec2 currentLinePoint = controlPoints[0];
-        curve[i*pointSize+xOffset] = currentLinePoint.x;
-        curve[i*pointSize+yOffset] = currentLinePoint.y;
+
+        const Vec2 curvePoint = controlPoints[0];
+        curve[i*pointSize+xOffset] = curvePoint.x;
+        curve[i*pointSize+yOffset] = curvePoint.y;
+        curve[i*pointSize+zOffset] = 1.0f;
+        curve[i*pointSize+redOffset] = color.r;
+        curve[i*pointSize+greenOffset] = color.g;
+        curve[i*pointSize+blueOffset] = color.b;
+        curve[i*pointSize+alphaOffset] = 1.0f;
+      }
+    }else if(mat4equal(g, bSplineBaseMatrix)) {
+      for (size_t i = 0; i<=maxLineSegments; ++i) {
+        const float t = float(i)/float(maxLineSegments);
+        
+        const unsigned int curveDegree = 3;
+        std::vector<Vec2> controlPoints = {p0, p1, p2, p3};
+        //std::vector<float> knots = {0, 0, 0, 0, 1, 2, 3, 4, 4, 4, 4};
+        std::vector<float> knots = {0,0,0,0,1,1,1,1};
+        const size_t knotCountShouldBe = curveDegree + controlPoints.size() +1;
+        if(knots.size() != knotCountShouldBe) {
+          printf("Warning: Knot count is %llu but should be %llu\n", knots.size(), knotCountShouldBe);
+        }
+        assert(knots.size() == knotCountShouldBe);
+        
+        Vec2 curvePoint = {0,0};
+        for(size_t currentControlPoint = 0; currentControlPoint < controlPoints.size(); currentControlPoint++) {
+          Vec2 currentTerm = coxDeBoor(knots, currentControlPoint, curveDegree, t) * controlPoints[currentControlPoint];
+          curvePoint = curvePoint + currentTerm;
+        }
+
+        curve[i*pointSize+xOffset] = curvePoint.x;
+        curve[i*pointSize+yOffset] = curvePoint.y;
         curve[i*pointSize+zOffset] = 1.0f;
         curve[i*pointSize+redOffset] = color.r;
         curve[i*pointSize+greenOffset] = color.g;
@@ -199,7 +245,7 @@ public:
   }
 
   void drawBezierSegmentDeCasteljau(const Vec2& p0, const Vec2& p1, const Vec2& p2, const Vec2& p3, const Vec4& color) {
-    // TODO SOLUTION 2:
+    // Completed SOLUTION 2:
     Mat4 g{
       0, 0, 0, 0,
       0, 0, 0, 0,
