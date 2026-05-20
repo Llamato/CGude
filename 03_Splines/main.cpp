@@ -32,6 +32,10 @@ public:
     printf("Vec2{%f, %f}\n", vec.x, vec.y);
   }
 
+  void printVec3(const Vec3& vec) {
+    printf("Vec3{%f, %f, %f}\n", vec.x, vec.y, vec.z);
+  }
+
   void printMat4(const Mat4& mat) {
     for(size_t currentElement = 0; currentElement < 4*4; currentElement++) {
       if(currentElement % 4 == 0) {
@@ -83,13 +87,35 @@ public:
     return (1 - at) * from + at * to;
   }
 
+  std::vector<Vec2> getBsplineControlPointsFromBasisMatrix(const Mat4& matrix) {
+
+  }
+
   float coxDeBoor(const std::vector<float>& knots, const size_t i, const size_t k, const float t) {
-    if(k == 0) {
-      return (knots[i] <= t && t < knots[i+1]) ? 1.0f : 0.0f;
+    if (k == 0) {
+        if (i == knots.size() - 2) {
+          return (knots[i] <= t && t <= knots[i+1]) ? 1.0f : 0.0f;
+        }
+        return (knots[i] <= t && t < knots[i+1]) ? 1.0f : 0.0f;
     }
     float d1 = knots[i+k] - knots[i];
     float d2 = knots[i+k+1] - knots[i+1];
     return (d1 == 0 ? 0 : (t - knots[i]) / d1) * coxDeBoor(knots, i, k-1, t) + (d2 == 0 ? 0 : (knots[i+k+1] - t) / d2) * coxDeBoor(knots, i+1, k-1, t);
+  }
+
+  std::vector<float> getClampedBsplineKnotsFromControlPoints(std::vector<Vec2>& points) {
+    unsigned int frontMultiplicities = 0;
+    for(size_t current = 0; current < points.size(); current++){
+        if(points[current] != points.front()) break;
+        frontMultiplicities++;
+    }
+    unsigned int backMultiplicities = 0;
+    for(size_t inverseOfCurrent = 0; inverseOfCurrent < points.size(); inverseOfCurrent++) {
+      if(points[points.size() -1 - inverseOfCurrent] != points.back()) break;
+      backMultiplicities++;
+    }
+
+
   }
 
   const size_t xOffset = 0;
@@ -199,34 +225,48 @@ public:
         curve[i*pointSize+alphaOffset] = 1.0f;
       }
     }else if(mat4equal(g, bSplineBaseMatrix)) {
+      const std::vector<Vec4> segementColors = {Vec4{1.0f,0.0f,0.0f,1.0f}, Vec4{0.0f,1.0f,0.0f,1.0f}, Vec4{0.0f,0.0f,1.0f,1.0f}, Vec4{0.0f,1.0f,1.0f,1.0f}, Vec4{1.0f,0.0f,1.0f,1.0f}};
+      const unsigned int pointsPerSegment = 4; //startpoint, controlpoint1, controlpoint2, endpoint (As per definition of Bazier/b splines)
+      const std::vector<Vec2> controlPoints = {p0,p0,p0,p1, p0,p0,p1,p2, p0,p1,p2,p3, p1,p2,p3,p3, p1,p2,p3,p3, p2,p3,p3,p3};
+      const std::vector<float> knots = ; //TODO: Calculate knots here.
+      
+      //Testing with one segment and multiplicity weighting to pass though start and end points.
+      //A one segment b-spline is basically a bazier spline.
+      //const std::vector<Vec2> controlPoints = {p0, p1, p2, p3};
+      //const std::vector<float> knots = {0,0,0,0,1,1,1,1};
+      
+     
+      //Ai suggested points
+      /*const std::vector<Vec2> controlPoints = {p0, p0, p0, p1, p2, p3, p3, p3, p3};
+      const std::vector<float> knots = {0, 0, 0, 0, 1, 2, 3, 4, 4, 4, 4};*/
+      const unsigned int curveDegree = knots.size() - controlPoints.size() - 1;
       for (size_t i = 0; i<=maxLineSegments; ++i) {
         const float t = float(i)/float(maxLineSegments);
-        
-        const unsigned int curveDegree = 3;
-        std::vector<Vec2> controlPoints = {p0, p1, p2, p3};
-        //std::vector<float> knots = {0, 0, 0, 0, 1, 2, 3, 4, 4, 4, 4};
-        std::vector<float> knots = {0,0,0,0,1,1,1,1};
-        const size_t knotCountShouldBe = curveDegree + controlPoints.size() +1;
-        if(knots.size() != knotCountShouldBe) {
-          printf("Warning: Knot count is %llu but should be %llu\n", knots.size(), knotCountShouldBe);
-        }
-        assert(knots.size() == knotCountShouldBe);
-        
+
         Vec2 curvePoint = {0,0};
         for(size_t currentControlPoint = 0; currentControlPoint < controlPoints.size(); currentControlPoint++) {
           Vec2 currentTerm = coxDeBoor(knots, currentControlPoint, curveDegree, t) * controlPoints[currentControlPoint];
           curvePoint = curvePoint + currentTerm;
         }
 
+        size_t currentSegment = t * knots.size() / pointsPerSegment;
+        const Vec4 segementColor = segementColors[currentSegment % segementColors.size()];
+
         curve[i*pointSize+xOffset] = curvePoint.x;
         curve[i*pointSize+yOffset] = curvePoint.y;
         curve[i*pointSize+zOffset] = 1.0f;
-        curve[i*pointSize+redOffset] = color.r;
-        curve[i*pointSize+greenOffset] = color.g;
-        curve[i*pointSize+blueOffset] = color.b;
+        curve[i*pointSize+redOffset] = segementColor.r;
+        curve[i*pointSize+greenOffset] = segementColor.g;
+        curve[i*pointSize+blueOffset] = segementColor.b;
         curve[i*pointSize+alphaOffset] = 1.0f;
       }
+      
+      //Debug!!!
+      const Vec2 endPoint = controlPoints.back();
+      curve[maxLineSegments*pointSize+xOffset] = endPoint.x;
+      curve[maxLineSegments*pointSize+yOffset] = endPoint.y;
     }
+    
     drawLines(curve, LineDrawType::STRIP, 3);
   }
  
@@ -273,8 +313,7 @@ public:
                p3.x,p3.y,0,1,0,0,1}, 20, true);
   }
   
-  void drawBSplineSegment(const Vec2& p0, const Vec2& p1, const Vec2& p2,
-                          const Vec2& p3, const Vec4& color) {
+  void drawBSplineSegment(const Vec2& p0, const Vec2& p1, const Vec2& p2, const Vec2& p3, const Vec4& color) {
     Mat4 g{
       1/6.0f, 4/6.0f, 1/6.0f, 0/6.0f,
      -3/6.0f, 0/6.0f, 3/6.0f, 0/6.0f,
@@ -323,11 +362,12 @@ public:
       const Vec2 p1{float(sa)*0.2f-0.5f,float(ca)*0.2f};
       const Vec2 p2{0.5f,0.2f};
       const Vec2 p3{0.5f,0.0f};
-      drawBSplineSegment(p0,p0,p0,p1,{1.0f,0.0f,0.0f,1.0f});
-      drawBSplineSegment(p0,p0,p1,p2,{0.0f,1.0f,0.0f,1.0f});
-      drawBSplineSegment(p0,p1,p2,p3,{0.0f,0.0f,1.0f,1.0f});
-      drawBSplineSegment(p1,p2,p3,p3,{0.0f,1.0f,1.0f,1.0f});
-      drawBSplineSegment(p2,p3,p3,p3,{1.0f,0.0f,1.0f,1.0f});
+      //drawBSplineSegment(p0,p0,p0,p1,{1.0f,0.0f,0.0f,1.0f});
+      //drawBSplineSegment(p0,p0,p1,p2,{0.0f,1.0f,0.0f,1.0f});
+      //drawBSplineSegment(p0,p1,p2,p3,{0.0f,0.0f,1.0f,1.0f});
+      //drawBSplineSegment(p1,p2,p3,p3,{0.0f,1.0f,1.0f,1.0f});
+      //drawBSplineSegment(p2,p3,p3,p3,{1.0f,0.0f,1.0f,1.0f});
+      drawBSplineSegment(p0, p1, p2, p3, {0.0f, 0.0f, 0.0f, 0.0f});
     }
   }
 } myApp;
