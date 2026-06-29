@@ -15,7 +15,7 @@ public:
   }
 
   float calcGspaceH(float x, float c) {
-    return fabsf(sinf(3.0f*M_PI/2*(x-M_PI/2*c))) * M_PI / sqrtf(2.0f) * 1.85f;
+    return fabsf(sinf(3.0f * M_PI/2 * (x - M_PI / 2 * c))) * M_PI / sqrtf(2.0f) * 1.85f;
   }
 
   float calcGspaceS(float x) {
@@ -50,7 +50,7 @@ public:
     return radius * saturated;
   }
 
-  Vec3 convertPosFromHSVToRGB(float x, float y) {
+  Vec3 convertPosFromHSVToRGB(float x, float y, float z) {
     // Completed:
     // enter code here that interprets the mouse's
     // x, y position as H ans S (I suggest to set
@@ -58,33 +58,55 @@ public:
     
     const float h = x;
     const float s = y;
-    const float v = 1.0f;
+    const float v = z;
 
-    return calcHSVs(s, calcHSVh(h));
+    return calcHSVv(v, calcHSVs(s, calcHSVh(h)));
   }
   
-  virtual void init() override {
-    fe = fr.generateFontEngine();
+  int absoluteV = UINT8_MAX;
+  void constructImage(double xPosition, double yPosition) {
+    Dimensions s = glEnv.getWindowSize();
+    if (xPosition < 0 || xPosition > s.width || yPosition < 0 || yPosition > s.height) return;
+
     for (uint32_t y = 0;y<image.height;++y) {
       for (uint32_t x = 0;x<image.width;++x) {
-        const Vec3 rgb = convertPosFromHSVToRGB(float(x)/image.width, float(y)/image.height);
+        const Vec3 rgb = convertPosFromHSVToRGB(float(x)/image.width, float(y)/image.height, float(absoluteV)/UINT8_MAX);
         image.setNormalizedValue(x,y,0,rgb.r); image.setNormalizedValue(x,y,1,rgb.g);
         image.setNormalizedValue(x,y,2,rgb.b); image.setValue(x,y,3,255);
       }
     }
+  }
+
+  void constructText(double xPosition, double yPosition) {
+    Dimensions s = glEnv.getWindowSize();
+    if (xPosition < 0 || xPosition > s.width || yPosition < 0 || yPosition > s.height) return;
+
+    float relativeV = float(absoluteV)/UINT8_MAX;
+    const Vec3 hsv{float(360*xPosition/s.width),float(1.0-yPosition/s.height), relativeV};
+    const Vec3 rgb = convertPosFromHSVToRGB(float(xPosition/s.width), float(1.0-yPosition/s.height), relativeV);
+    std::stringstream ss; 
+    ss << "HSV: " << hsv << "  RGB: " << rgb; 
+    text = ss.str();
+  }
+
+  virtual void init() override {
+    fe = fr.generateFontEngine();
+    constructImage(0, 0);
     GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
     GL(glBlendEquation(GL_FUNC_ADD));
     GL(glEnable(GL_BLEND));
   }
   
   virtual void mouseMove(double xPosition, double yPosition) override {
-    Dimensions s = glEnv.getWindowSize();
-    if (xPosition < 0 || xPosition > s.width || yPosition < 0 || yPosition > s.height) return;
-    const Vec3 hsv{float(360*xPosition/s.width),float(1.0-yPosition/s.height),1.0f};
-    const Vec3 rgb = convertPosFromHSVToRGB(float(xPosition/s.width), float(1.0-yPosition/s.height));
-    std::stringstream ss; ss << "HSV: " << hsv << "  RGB: " << rgb; text = ss.str();
+    constructText(xPosition, yPosition);
   }
-    
+
+  virtual void mouseWheel(double x_offset, double y_offset, double xPosition, double yPosition) override {
+    absoluteV = std::clamp(absoluteV+int(y_offset), 0, UINT8_MAX);
+    constructImage(xPosition, yPosition);
+    constructText(xPosition, yPosition);
+  }
+
   virtual void draw() override {
     drawImage(image);
 
