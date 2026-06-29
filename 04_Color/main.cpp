@@ -10,12 +10,57 @@ public:
 
   MyGLApp() : GLApp{800,800,1,"Color Picker"} {}
   
+  float lerp(float a, float b, float t) {
+    return a + (b - a) * t;
+  }
+
+  float calcGspaceH(float x, float c) {
+    return fabsf(sinf(3.0f*M_PI/2*(x-M_PI/2*c))) * M_PI / sqrtf(2.0f) * 1.85f;
+  }
+
+  float calcGspaceS(float x) {
+    return x;
+  }
+
+  Vec3 calcHSVh(float angle) {
+    const uint8_t segmentCount = 6;
+    float segment;
+    const float positionInSegment = std::modf(angle * segmentCount, &segment);
+    switch(static_cast<int>(round(segment))) {
+      case 0: return Vec3{1.0f, positionInSegment, 0.0f};
+      case 1: return Vec3{1.0f-positionInSegment, 1.0f, 0.0f};
+      case 2: return Vec3{0.0f, 1.0f, positionInSegment};
+      case 3: return Vec3{0.0f, 1.0f - positionInSegment, 1.0f};
+      case 4: return Vec3{positionInSegment, 0.0f, 1.0f};
+      case 5: return Vec3{1.0f, 0.0f, 1.0f - positionInSegment};
+    }
+    return Vec3{0.0f, 0.0f, 0.0f};
+  }
+
+  Vec3 calcHSVs(float height, Vec3 hued) {
+    const float iheight = 1.0f - height;
+    Vec3 saturated;
+    saturated.r = lerp(hued.r, 1.0f, iheight);
+    saturated.g = lerp(hued.g, 1.0f, iheight);
+    saturated.b = lerp(hued.b, 1.0f, iheight);
+    return saturated;
+  }
+
+  Vec3 calcHSVv(float radius, Vec3 saturated) {
+    return radius * saturated;
+  }
+
   Vec3 convertPosFromHSVToRGB(float x, float y) {
-    // TODO:
+    // Completed:
     // enter code here that interprets the mouse's
     // x, y position as H ans S (I suggest to set
     // V to 1.0) and converts that tripple to RGB
-    return Vec3{x,y,1.0f};
+    
+    const float h = x;
+    const float s = y;
+    const float v = 1.0f;
+
+    return calcHSVs(s, calcHSVh(h));
   }
   
   virtual void init() override {
