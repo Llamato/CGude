@@ -45,6 +45,29 @@ public:
     }
   }
 
+  Vec3 htmlColorToOpenGlColor(const std::string html) {
+    std::string htmlR = html.substr(1, 2);
+    std::string htmlG = html.substr(3, 2);
+    std::string htmlB = html.substr(5, 2);
+    unsigned int absoluteR = std::stoul(htmlR, nullptr, 16);
+    unsigned int absoluteG = std::stoul(htmlG, nullptr, 16);
+    unsigned int absoluteB = std::stoul(htmlB, nullptr, 16);
+    float relativeR = static_cast<float>(absoluteR) / UINT8_MAX;
+    float relativeG = static_cast<float>(absoluteG) / UINT8_MAX;
+    float relativeB = static_cast<float>(absoluteB) / UINT8_MAX; 
+    return Vec3{relativeR, relativeG, relativeB};
+  }
+
+  std::vector<Vec3> getTransgenderColors(void) {
+    Vec3 blue = htmlColorToOpenGlColor("#5BCFFA");
+    Vec3 pink = htmlColorToOpenGlColor("#F5A9B8");
+    Vec3 white = Vec3{1.0f, 1.0f, 1.0f};
+    std::vector<Vec3> colors;
+    colors.push_back(blue);
+    colors.push_back(pink);
+    return colors;
+  }
+
   // Completed:
       // complete the function drawPolySegment
       // this function takes as argument the
@@ -225,46 +248,34 @@ public:
         curve[i*pointSize+alphaOffset] = 1.0f;
       }
     }else if(mat4equal(g, bSplineBaseMatrix)) {
-      const std::vector<Vec4> segementColors = {Vec4{1.0f,0.0f,0.0f,1.0f}, Vec4{0.0f,1.0f,0.0f,1.0f}, Vec4{0.0f,0.0f,1.0f,1.0f}, Vec4{0.0f,1.0f,1.0f,1.0f}, Vec4{1.0f,0.0f,1.0f,1.0f}};
-      const unsigned int pointsPerSegment = 4; //startpoint, controlpoint1, controlpoint2, endpoint (As per definition of Bazier/b splines)
-      const std::vector<Vec2> controlPoints = {p0,p0,p0,p1, p0,p0,p1,p2, p0,p1,p2,p3, p1,p2,p3,p3, p1,p2,p3,p3, p2,p3,p3,p3};
-      const std::vector<float> knots = ; //TODO: Calculate knots here.
-      
-      //Testing with one segment and multiplicity weighting to pass though start and end points.
-      //A one segment b-spline is basically a bazier spline.
-      //const std::vector<Vec2> controlPoints = {p0, p1, p2, p3};
-      //const std::vector<float> knots = {0,0,0,0,1,1,1,1};
-      
-     
-      //Ai suggested points
-      /*const std::vector<Vec2> controlPoints = {p0, p0, p0, p1, p2, p3, p3, p3, p3};
-      const std::vector<float> knots = {0, 0, 0, 0, 1, 2, 3, 4, 4, 4, 4};*/
-      const unsigned int curveDegree = knots.size() - controlPoints.size() - 1;
-      for (size_t i = 0; i<=maxLineSegments; ++i) {
-        const float t = float(i)/float(maxLineSegments);
+      // 2-segment cubic B-spline
+      const std::vector<Vec3> segmentColors = getTransgenderColors();
+      const std::vector<Vec2> controlPoints = { p0, p1, p2, p3, p3 };
+      const std::vector<float> knots = { 0,0,0,0, 1, 2,2,2,2 };
+      const unsigned int degree = 3;
+      const float tMin = knots[degree];
+      const float tMax = knots[controlPoints.size()];
+      for (size_t i = 0; i <= maxLineSegments; ++i) {
+          const float frac = float(i) / float(maxLineSegments);
+          const float t = tMin + frac * (tMax - tMin); // t in [0, 2]
+          Vec3 segmentColor = segmentColors[floor(t)];
+          
+          Vec2 curvePoint{0.0f, 0.0f};
 
-        Vec2 curvePoint = {0,0};
-        for(size_t currentControlPoint = 0; currentControlPoint < controlPoints.size(); currentControlPoint++) {
-          Vec2 currentTerm = coxDeBoor(knots, currentControlPoint, curveDegree, t) * controlPoints[currentControlPoint];
-          curvePoint = curvePoint + currentTerm;
-        }
+          for (size_t j = 0; j < controlPoints.size(); ++j) {
+              const float basis = coxDeBoor(knots, j, degree, t);
+              curvePoint = curvePoint + basis * controlPoints[j];
+          }
 
-        size_t currentSegment = t * knots.size() / pointsPerSegment;
-        const Vec4 segementColor = segementColors[currentSegment % segementColors.size()];
+          curve[i * pointSize + xOffset] = curvePoint.x;
+          curve[i * pointSize + yOffset] = curvePoint.y;
+          curve[i * pointSize + zOffset] = 1.0f;
 
-        curve[i*pointSize+xOffset] = curvePoint.x;
-        curve[i*pointSize+yOffset] = curvePoint.y;
-        curve[i*pointSize+zOffset] = 1.0f;
-        curve[i*pointSize+redOffset] = segementColor.r;
-        curve[i*pointSize+greenOffset] = segementColor.g;
-        curve[i*pointSize+blueOffset] = segementColor.b;
-        curve[i*pointSize+alphaOffset] = 1.0f;
+          curve[i * pointSize + redOffset]   = segmentColor.r;
+          curve[i * pointSize + greenOffset] = segmentColor.g;
+          curve[i * pointSize + blueOffset]  = segmentColor.b;
+          curve[i * pointSize + alphaOffset] = 1.0f;
       }
-      
-      //Debug!!!
-      const Vec2 endPoint = controlPoints.back();
-      curve[maxLineSegments*pointSize+xOffset] = endPoint.x;
-      curve[maxLineSegments*pointSize+yOffset] = endPoint.y;
     }
     
     drawLines(curve, LineDrawType::STRIP, 3);
