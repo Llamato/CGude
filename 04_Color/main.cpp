@@ -9,17 +9,39 @@ public:
   std::string text;
 
   MyGLApp() : GLApp{800,800,1,"Color Picker"} {}
+
+  Vec3 htmlColorToOpenGlColor(const std::string html) {
+    std::string htmlR = html.substr(1, 2);
+    std::string htmlG = html.substr(3, 2);
+    std::string htmlB = html.substr(5, 2);
+    unsigned int absoluteR = std::stoul(htmlR, nullptr, 16);
+    unsigned int absoluteG = std::stoul(htmlG, nullptr, 16);
+    unsigned int absoluteB = std::stoul(htmlB, nullptr, 16);
+    float relativeR = static_cast<float>(absoluteR) / UINT8_MAX;
+    float relativeG = static_cast<float>(absoluteG) / UINT8_MAX;
+    float relativeB = static_cast<float>(absoluteB) / UINT8_MAX; 
+    return Vec3{relativeR, relativeG, relativeB};
+  }
+
+  std::vector<Vec3> getTransgenderColors(void) {
+    Vec3 blue = htmlColorToOpenGlColor("#5BCFFA");
+    Vec3 pink = htmlColorToOpenGlColor("#F5A9B8");
+    Vec3 white = Vec3{1.0f, 1.0f, 1.0f};
+    std::vector<Vec3> colors;
+    colors.push_back(blue);
+    colors.push_back(pink);
+    colors.push_back(white);
+    colors.push_back(pink);
+    colors.push_back(blue);
+    return colors;
+  }
+
+  Vec3 blend(Vec3 color1, Vec3 color2, float t) {
+    return  (1.0f-t) * color1 + t * color2;
+  }
   
   float lerp(float a, float b, float t) {
     return a + (b - a) * t;
-  }
-
-  float calcGspaceH(float x, float c) {
-    return fabsf(sinf(3.0f * M_PI/2 * (x - M_PI / 2 * c))) * M_PI / sqrtf(2.0f) * 1.85f;
-  }
-
-  float calcGspaceS(float x) {
-    return x;
   }
 
   Vec3 calcHSVh(float angle) {
@@ -64,9 +86,24 @@ public:
   }
   
   int absoluteV = UINT8_MAX;
-  void constructImage(double xPosition, double yPosition) {
+  void constructHSV(double xPosition, double yPosition) {
     Dimensions s = glEnv.getWindowSize();
     if (xPosition < 0 || xPosition > s.width || yPosition < 0 || yPosition > s.height) return;
+
+    for (uint32_t y = 0;y<image.height;++y) {
+      for (uint32_t x = 0;x<image.width;++x) {
+        const Vec3 rgb = convertPosFromHSVToRGB(float(x)/image.width, float(y)/image.height, float(absoluteV)/UINT8_MAX);
+        image.setNormalizedValue(x,y,0,rgb.r); image.setNormalizedValue(x,y,1,rgb.g);
+        image.setNormalizedValue(x,y,2,rgb.b); image.setValue(x,y,3,255);
+      }
+    }
+  }
+
+  void constructTGV(double xPosition, double yPosition) {
+    Dimensions s = glEnv.getWindowSize();
+    if (xPosition < 0 || xPosition > s.width || yPosition < 0 || yPosition > s.height) return;
+
+    std::vector<Vec3> flag = getTransgenderColors();
 
     for (uint32_t y = 0;y<image.height;++y) {
       for (uint32_t x = 0;x<image.width;++x) {
@@ -91,7 +128,7 @@ public:
 
   virtual void init() override {
     fe = fr.generateFontEngine();
-    constructImage(0, 0);
+    constructHSV(0, 0);
     GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
     GL(glBlendEquation(GL_FUNC_ADD));
     GL(glEnable(GL_BLEND));
@@ -103,7 +140,7 @@ public:
 
   virtual void mouseWheel(double x_offset, double y_offset, double xPosition, double yPosition) override {
     absoluteV = std::clamp(absoluteV+int(y_offset), 0, UINT8_MAX);
-    constructImage(xPosition, yPosition);
+    constructHSV(xPosition, yPosition);
     constructText(xPosition, yPosition);
   }
 
