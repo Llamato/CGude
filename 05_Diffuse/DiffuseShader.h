@@ -10,6 +10,8 @@ public:
   virtual Vec3 shade(Vertex surface) const override;
 
 private:
-  // TODO: add the appropriate member variables here
+  // Completed: add the appropriate member variables here
+  Vec3 light;
+  Vec3 light_diffuse_color;
 
 };

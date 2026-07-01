@@ -3,10 +3,14 @@
 
 class Vertex {
 public:
-  // TODO: add the appropriate memeber variables here
+  // Completed: add the appropriate memeber variables here
+  Vec3 position;
+  Material material;
+  Vec3 normal;
 
   Vertex(const Vec3& position, const Material& material, const Vec3& normal)
-  // TODO: initialize member variables here
+  // Completed: initialize member variables here
+  : position(position), material(material), normal(normal)
   {}
 
   Vertex(const Vec3& position, const Material& material)

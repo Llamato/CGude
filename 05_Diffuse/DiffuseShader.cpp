@@ -1,8 +1,10 @@
 #include "DiffuseShader.h"
 
 DiffuseShader::DiffuseShader(const Vec3& light, const Vec3& light_diffuse_color)
-// TODO: initialize member variables here
+// Completed: initialize member variables here
 {
+  this->light = light;
+  this->light_diffuse_color = light_diffuse_color;
 }
 
 Vec3 DiffuseShader::shade(Vertex surface) const {
@@ -13,5 +15,5 @@ Vec3 DiffuseShader::shade(Vertex surface) const {
    */
 
   // just a dummy return value, needs to be replaced with the right one
-  return {0,0,0};
+  return Vec3{1.0f,1.0f,1.0f};
 }
