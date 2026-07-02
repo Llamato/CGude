@@ -3,6 +3,7 @@
 #include "Vertex.h"
 #include "Image.h"
 #include "Shader.h"
+#include "Vec2.h"
 
 #define TRIANGLE_VERTEX_COUNT 3
 
@@ -17,5 +18,5 @@ private:
   Vertex vertices[TRIANGLE_VERTEX_COUNT];
   const Shader& shader;
 
-  Vec3 cartesianToBarycentric(Vec3& point);
+  Vec3 cartesianToBarycentric(Vec2 & point);
 };
