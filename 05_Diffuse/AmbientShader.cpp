@@ -8,6 +8,6 @@ Vec3 AmbientShader::shade(Vertex surface) const {
    */
   
   // just a dummy return value, needs to be replaced with the right one
-  std::cout << surface.material.color_ambient << '\n';
+  //return Vec3{0, 0, 0};
   return surface.material.color_ambient;
 }
