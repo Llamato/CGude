@@ -12,20 +12,41 @@ float dot(Vec2& vector1, Vec2& vector2) {
 }
 
 Vec3 Triangle::cartesianToBarycentric(Vec2& p) {
+  //Reassignment for easier math
   Vec2 v0 = this->vertices[0].position.xy;
   Vec2 v1 = this->vertices[1].position.xy;
   Vec2 v2 = this->vertices[2].position.xy;
+
+  //Translate verticies such that A becomes the origin
   Vec2 A = v1 - v0;
   Vec2 B = v2 - v0;
   Vec2 C = p - v0;
+
+  //Solve 
+  // C.x = beta * A.x + gamma * B.x
+  // C.y = beta * A.y + gamma * B.y
+  //By using dot product projection for numerical stability
   float d00 = dot(A, A);
   float d01 = dot(A, B);
   float d11 = dot(B, B);
   float d20 = dot(C, A);
   float d21 = dot(C, B);
+
+  //Now we can instead solve
+  // dot(C, A) = beta * dot(A, A) + gamma * dot(B, A)
+  // dot(C, B) = beta * dot(A, B) + gamma * dot(B, B)
+  //for beta and gamma using Cramer's Rule, Witch states that for
+  //a*x + b*y = e
+  //c*x + d*y = f
+  //The solutions are
+  //x = (e*d - b*f) / (a*d - b*c)
+  //y = (a*f - e*c) / (a*d - b*c)
   float denominator = d00 * d11 - d01 * d01;
   float beta = (d11 * d20 - d01 * d21) / denominator;
   float gamma = (d00 * d21 - d01 * d20) / denominator;
+
+  //Lastly we use the triangle identity: alpha + beta + gamma = 1
+  //to solve for alpha.
   float alpha = 1.0f - beta - gamma;
   return Vec3{alpha, beta, gamma};
 }
