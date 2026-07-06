@@ -64,7 +64,14 @@ void Triangle::draw(Image& image) {
       Vec3 barycentric = cartesianToBarycentric(absolutePixel);
       bool pixelIsInsideTriangle = barycentric.x > 0.0f && barycentric.y > 0.0f && barycentric.z > 0.0f;
       if(pixelIsInsideTriangle) {
-        const Vec3 color = shader.shade(Vertex{Vec3{absolutePixel.x, absolutePixel.y, 1.0f}, Material{barycentric}});
+        uint8_t activeVertex = 0;
+        if(barycentric.y > barycentric.x) {
+          activeVertex = 1;
+        }
+        if(barycentric.z > barycentric.y) {
+          activeVertex = 2;
+        }
+        const Vec3 color = shader.shade(Vertex{Vec3{absolutePixel.x, absolutePixel.y, 1.0f}, Material{barycentric, vertices[activeVertex].material.color_diffuse, vertices[activeVertex].material.color_specular}});
         image.setNormalizedValue(currentColumn, currentRow, 0, color.r);
         image.setNormalizedValue(currentColumn, currentRow, 1, color.g);
         image.setNormalizedValue(currentColumn, currentRow, 2, color.b);
