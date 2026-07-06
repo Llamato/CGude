@@ -42,25 +42,12 @@ void Triangle::draw(Image& image) {
       Vec2 absolutePixel = {currentColumn, currentRow};
       Vec3 barycentric = cartesianToBarycentric(absolutePixel);
       bool pixelIsInsideTriangle = barycentric.x > 0.0f && barycentric.y > 0.0f && barycentric.z > 0.0f;
-      if (pixelIsInsideTriangle) {
-        uint8_t activeVertex = 0;
-        if(barycentric.y > barycentric.x) {
-          activeVertex = 1;
-        }
-        if(barycentric.z > barycentric.y) {
-          activeVertex = 2;
-        }
-        const Vec3 color = shader.shade(this->vertices[activeVertex]);
-        //std::cout << currentColumn << ':' << currentRow << ':' << '(' << color.r << ',' << color.g << ',' << color.b << ")\n";
+      if(pixelIsInsideTriangle) {
+        const Vec3 color = shader.shade(Vertex{Vec3{absolutePixel.x, absolutePixel.y, 1.0f}, Material{barycentric}});
         image.setNormalizedValue(currentColumn, currentRow, 0, color.r);
         image.setNormalizedValue(currentColumn, currentRow, 1, color.g);
         image.setNormalizedValue(currentColumn, currentRow, 2, color.b);
-        //std::cout << "Inside: ";
-      } else {
-        //std::cout << "Outside: ";
       }
-      //std::cout << "Absolute:" << absolutePixel << '\t' << "Barycentric:" << barycentric << '\n';
     }
   }
-  //std::cout << "A: " << this->vertices[0].position << '\t' << "B: " << this->vertices[1].position << '\t' << "C: " << this->vertices[2].position << '\n';
 }
