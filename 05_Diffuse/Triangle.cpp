@@ -1,4 +1,3 @@
-#include <iostream>
 #include "Triangle.h"
 
 Triangle::Triangle(const Vertex& v0, const Vertex& v1, const Vertex& v2,
@@ -71,7 +70,7 @@ void Triangle::draw(Image& image) {
         if(barycentric.z > barycentric.y) {
           activeVertex = 2;
         }
-        const Vec3 color = shader.shade(Vertex{Vec3{absolutePixel.x, absolutePixel.y, 1.0f}, Material{barycentric, vertices[activeVertex].material.color_diffuse, vertices[activeVertex].material.color_specular}});
+        const Vec3 color = shader.shade(Vertex{Vec3{absolutePixel.x, absolutePixel.y, 1.0f}, Material{barycentric.x * vertices[0].material.color_ambient + barycentric.y * vertices[1].material.color_ambient + barycentric.z * vertices[2].material.color_ambient, vertices[activeVertex].material.color_diffuse, vertices[activeVertex].material.color_specular}});
         image.setNormalizedValue(currentColumn, currentRow, 0, color.r);
         image.setNormalizedValue(currentColumn, currentRow, 1, color.g);
         image.setNormalizedValue(currentColumn, currentRow, 2, color.b);

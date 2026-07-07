@@ -17,5 +17,5 @@ private:
   // Completed: add the appropriate member variables here
   Vertex vertices[TRIANGLE_VERTEX_COUNT];
   const Shader& shader;
-  Vec3 cartesianToBarycentric(Vec2 & point);
+  Vec3 cartesianToBarycentric(Vec2& point);
 };

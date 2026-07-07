@@ -4,6 +4,8 @@
 #include "AmbientShader.h"
 #include "DiffuseShader.h"
 
+#define SAUCE
+
 class MyGLApp : public GLApp
 {
 public:
@@ -15,10 +17,17 @@ public:
     GL(glDisable(GL_CULL_FACE));
 
     // define some materials for our triangles
-    const Material red{ Vec3{1, 0, 0} };
-    const Material green{ Vec3{0, 1, 0} };
-    const Material blue{ Vec3{0, 0, 1} };
+    #ifndef SAUCE 
+        const Material red{ Vec3{1, 0, 0} };
+        const Material green{ Vec3{0, 1, 0} };
+        const Material blue{ Vec3{0, 0, 1} };
+    #endif
     const Material lightOrange{ Vec3{1, 0.765f, 0.482f } };
+    #ifdef SAUCE
+        const Material red{ htmlColorToOpenGlColor("#5BCFFA") };
+        const Material green{ htmlColorToOpenGlColor("#F5A9B8") };
+        const Material blue{ Vec3{1, 1, 1} };
+    #endif
 
     // define the vertices for the first triangle
     const Vertex v0{ Vec3{12, 360, 0}, red };
@@ -51,6 +60,19 @@ public:
     drawImage(image);
   }
 
+private:
+    Vec3 htmlColorToOpenGlColor(const std::string html) {
+        std::string htmlR = html.substr(1, 2);
+        std::string htmlG = html.substr(3, 2);
+        std::string htmlB = html.substr(5, 2);
+        unsigned int absoluteR = std::stoul(htmlR, nullptr, 16);
+        unsigned int absoluteG = std::stoul(htmlG, nullptr, 16);
+        unsigned int absoluteB = std::stoul(htmlB, nullptr, 16);
+        float relativeR = static_cast<float>(absoluteR) / UINT8_MAX;
+        float relativeG = static_cast<float>(absoluteG) / UINT8_MAX;
+        float relativeB = static_cast<float>(absoluteB) / UINT8_MAX; 
+        return Vec3{relativeR, relativeG, relativeB};
+    }
 } myApp;
 
 #ifdef _WIN32
