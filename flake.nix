@@ -109,7 +109,7 @@
         cg-splines = cgude-build 3 "Splines";
         cg-color = cgude-build 4 "Color";
         cg-diffuse = cgude-build 5 "Diffuse";
-        cg-Phong = cgude-build 6 "Phong";
+        cg-phong = cgude-build 6 "Phong";
         cg-raycast = cgude-build 7 "Raycasting";
         cg-texturing = cgude-build 9 "Texturing";
         cg-hellogl = cgude-build 10 "HelloGL";
