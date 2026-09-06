@@ -18,4 +18,8 @@ public:
 	// Inherited via Shader
 	virtual Vec3 shade(Vertex surface) const override;
 
+private:
+	float cs;
+	float bh;
+
 };
