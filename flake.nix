@@ -69,24 +69,25 @@
           '';
         };
         cgude-build =
-          number: pname: sauce:
+          number: pname: options: with builtins // lib;
           let
             padFront =
               string: padding: targetLength:
-              if (builtins.stringLength string) < targetLength then
+              if (stringLength string) < targetLength then
                 padFront (padding + string) padding targetLength
               else
                 string;
             paddedNum = padFront (toString number) "0" 2;
             path = "${paddedNum}_${pname}";
+            flags = map (option: "-D" + option) options;
           in
           pkgs.stdenv.mkDerivation {
             inherit pname nativeBuildInputs buildInputs;
             version = "1.0.0";
-            src = pkgs.lib.cleanSource ./.;
-
-            patchPhase = lib.optionalString sauce ''
-              substituteInPlace ${path}/makefile --replace 'CFLAGS=-c' 'CFLAGS=-DSAUCE -c'
+            src = cleanSource ./.;
+    
+            patchPhase = optionalString (length options > 0) ''
+              substituteInPlace ${path}/makefile --replace 'CFLAGS=-c' 'CFLAGS=${concatStringsSep " " flags} -c'
             '';
 
             buildPhase = ''
@@ -109,7 +110,6 @@
               runHook postInstall
             '';
           };
-
         tasks = {
           "OBJ" = 1;
           "Intersect" = 2;
@@ -118,25 +118,32 @@
           "Diffuse" = 5;
           "Phong" = 6;
         };
-        saucyTasks = lib.attrsets.mapAttrs' (name: value: let 
-          pname = lib.toLower "${name}-saucy";
-        in {
-          name = pname;
-          value = cgude-build value name true;
-        }) tasks;
-        boringTasks = lib.attrsets.mapAttrs' (name: value: let 
-          pname = lib.toLower name;
-        in {
-          name = pname;
-          value = cgude-build value name false;
-        }) tasks;
-        allTasks = boringTasks // saucyTasks;
+
+        options = [
+          "EXTRA"
+          "SAUCE"
+        ];
+
+        allTasks = with builtins // lib; mapAttrs (drvname: drvattrs: cgude-build drvattrs.index drvattrs.task drvattrs.options) (foldl (acc: elem: acc // elem) { } (flatten (map (currentConfig: 
+          mapAttrs' (task: index: let 
+              selectedOptions = attrNames (filterAttrs (_: v: v) currentConfig);
+            in {
+              name = toLower (concatStringsSep "-" ([task] ++ selectedOptions));
+              value = {
+                inherit index task;
+                options = selectedOptions;
+              };
+          }) tasks
+        ) (cartesianProduct (listToAttrs (map (option: { 
+            name = option; 
+            value = [true false];
+          }) options))))));
       in
       {
         packages = {
           default = pkgs.symlinkJoin {
             name = "cgude-tasks";
-            paths = builtins.attrValues boringTasks;
+            paths = builtins.attrValues allTasks;
           };
         }
         // allTasks;
