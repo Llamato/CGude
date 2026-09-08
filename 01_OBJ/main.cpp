@@ -38,14 +38,19 @@ public:
   }
 
   void writeTriangleData(void) {
+
+    //Vertex 1
     data.push_back(0.0f); data.push_back(0.5f); data.push_back(0.0f);  // position
     data.push_back(1.0f); data.push_back(0.0f); data.push_back(0.0f); data.push_back(1.0f); // color
     data.push_back(0.0f); data.push_back(0.0f); data.push_back(1.0f); // normal
 
+
+    //Vertex 2
     data.push_back(-0.5f); data.push_back(-0.5f); data.push_back(0.0f);
     data.push_back(0.0f); data.push_back(0.0f); data.push_back(1.0f); data.push_back(1.0f);
     data.push_back(0.0f); data.push_back(0.0f); data.push_back(1.0f);
-
+    
+    //Vertex 3
     data.push_back(0.5f); data.push_back(-0.5f); data.push_back(0.0f);
     data.push_back(0.0f); data.push_back(1.0f); data.push_back(0.0f); data.push_back(1.0f);
     data.push_back(0.0f); data.push_back(0.0f); data.push_back(1.0f);
@@ -57,19 +62,6 @@ public:
     std::vector<Vec3> colors;
     colors.push_back(magenta);
     colors.push_back(black);
-    return colors;
-  }
-
-  std::vector<Vec3> getTransgenderColors(void) {
-    Vec3 blue = htmlColorToOpenGlColor("#5BCFFA");
-    Vec3 pink = htmlColorToOpenGlColor("#F5A9B8");
-    Vec3 white = Vec3{1.0f, 1.0f, 1.0f};
-    std::vector<Vec3> colors;
-    colors.push_back(blue);
-    colors.push_back(pink);
-    colors.push_back(white);
-    colors.push_back(pink);
-    colors.push_back(blue);
     return colors;
   }
 
@@ -85,6 +77,32 @@ public:
     float relativeB = static_cast<float>(absoluteB) / UINT8_MAX; 
     return Vec3{relativeR, relativeG, relativeB};
   }
+
+
+  std::vector<Vec3> getBoringColors(void) {
+    Vec3 red = Vec3{1.0f, 0.0f, 0.0f};
+    Vec3 green = Vec3{0.0f, 1.0f, 0.0f};
+    Vec3 blue = Vec3{0.0f, 0.0f, 1.0f};
+    std::vector<Vec3> colors;
+    colors.push_back(red);
+    colors.push_back(green);
+    colors.push_back(blue);
+    return colors;
+  }
+
+  std::vector<Vec3> getDegenColors(void) {
+    Vec3 blue = htmlColorToOpenGlColor("#5BCFFA");
+    Vec3 pink = htmlColorToOpenGlColor("#F5A9B8");
+    Vec3 white = Vec3{1.0f, 1.0f, 1.0f};
+    std::vector<Vec3> colors;
+    colors.push_back(blue);
+    colors.push_back(pink);
+    colors.push_back(white);
+    colors.push_back(pink);
+    colors.push_back(blue);
+    return colors;
+  }
+
 
   struct MeshDimensions {
     Vec3 minimum;
@@ -144,7 +162,7 @@ public:
     GL(glEnable(GL_DEPTH_TEST));
 
     const OBJFile m{"bunny.obj", true};
-    writeObjData(m, getTransgenderColors());
+    writeObjData(m, getDegenColors());
   }
   
   virtual void animate(double animationTime) override {
@@ -167,7 +185,12 @@ public:
       activeModel = ACTIVE_MODEL_BUNNY;
       data.clear();
       const OBJFile m{"bunny.obj", true};
-      writeObjData(m, getTransgenderColors());
+      #ifndef SAUCE
+        writeObjData(m, getDegenColors());
+      #endif
+      #ifdef SAUCE
+        writeObjData(m, getBoringColors());
+      #endif
     }else{
       activeModel = ACTIVE_MODEL_CUBE;
       data.clear();
