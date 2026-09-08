@@ -69,7 +69,8 @@
           '';
         };
         cgude-build =
-          number: pname: options: with builtins // lib;
+          number: pname: options:
+          with builtins // lib;
           let
             padFront =
               string: padding: targetLength:
@@ -85,7 +86,7 @@
             inherit pname nativeBuildInputs buildInputs;
             version = "1.0.0";
             src = cleanSource ./.;
-    
+
             patchPhase = optionalString (length options > 0) ''
               substituteInPlace ${path}/makefile --replace 'CFLAGS=-c' 'CFLAGS=${concatStringsSep " " flags} -c'
             '';
@@ -124,20 +125,44 @@
           "SAUCE"
         ];
 
-        allTasks = with builtins // lib; mapAttrs (drvname: drvattrs: cgude-build drvattrs.index drvattrs.task drvattrs.options) (foldl (acc: elem: acc // elem) { } (flatten (map (currentConfig: 
-          mapAttrs' (task: index: let 
-              selectedOptions = attrNames (filterAttrs (_: v: v) currentConfig);
-            in {
-              name = toLower (concatStringsSep "-" ([task] ++ selectedOptions));
-              value = {
-                inherit index task;
-                options = selectedOptions;
-              };
-          }) tasks
-        ) (cartesianProduct (listToAttrs (map (option: { 
-            name = option; 
-            value = [true false];
-          }) options))))));
+        allTasks =
+          with builtins // lib;
+          mapAttrs (drvname: drvattrs: cgude-build drvattrs.index drvattrs.task drvattrs.options) (
+            foldl (acc: elem: acc // elem) { } (
+              flatten (
+                map
+                  (
+                    currentConfig:
+                    mapAttrs' (
+                      task: index:
+                      let
+                        selectedOptions = attrNames (filterAttrs (_: v: v) currentConfig);
+                      in
+                      {
+                        name = toLower (concatStringsSep "-" ([ task ] ++ selectedOptions));
+                        value = {
+                          inherit index task;
+                          options = selectedOptions;
+                        };
+                      }
+                    ) tasks
+                  )
+                  (
+                    cartesianProduct (
+                      listToAttrs (
+                        map (option: {
+                          name = option;
+                          value = [
+                            true
+                            false
+                          ];
+                        }) options
+                      )
+                    )
+                  )
+              )
+            )
+          );
       in
       {
         packages = {
@@ -148,10 +173,19 @@
         }
         // allTasks;
 
-        apps = builtins.mapAttrs (name: drv: {
-          type = "app";
-          program = "${pkgs.writeShellScript "cgude-run-${name}" "exec $(find ${drv}/ -type f -executable | head -1)"}";
-        }) allTasks;
+        apps = builtins.mapAttrs (
+          name: drv:
+          let
+            runScript = ''
+              cd ${drv}
+              exec $(find . -type f -executable | head -21)
+            '';
+          in
+          {
+            type = "app";
+            program = "${pkgs.writeShellScript "cgude-run-${name}" runScript}";
+          }
+        ) allTasks;
 
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
