@@ -103,7 +103,6 @@ public:
     return colors;
   }
 
-
   struct MeshDimensions {
     Vec3 minimum;
     Vec3 maximum;
@@ -143,8 +142,12 @@ public:
         data.push_back(posx);
         data.push_back(posy);
         data.push_back(posz);
-
-        Vec3 currentColor = colors[static_cast<size_t>(((posy - meshDimensions.minimum.y) / (meshDimensions.maximum.y - meshDimensions.minimum.y)) * colors.size())];
+        #if defined(SAUCE) || defined(EXTRA)
+          Vec3 currentColor = colors[static_cast<size_t>(((posy - meshDimensions.minimum.y) / (meshDimensions.maximum.y - meshDimensions.minimum.y)) * colors.size())];
+        #endif
+        #if !(defined(SAUCE) || defined(EXTRA))
+          Vec3 currentColor = htmlColorToOpenGlColor("#d3078f");
+        #endif
         data.push_back(currentColor.r);
         data.push_back(currentColor.g);
         data.push_back(currentColor.b);
@@ -162,7 +165,12 @@ public:
     GL(glEnable(GL_DEPTH_TEST));
 
     const OBJFile m{"bunny.obj", true};
-    writeObjData(m, getDegenColors());
+    #ifdef SAUCE
+      writeObjData(m, getDegenColors());
+    #endif
+    #ifndef SAUCE
+      writeObjData(m, getBoringColors());
+    #endif
   }
   
   virtual void animate(double animationTime) override {
@@ -185,10 +193,10 @@ public:
       activeModel = ACTIVE_MODEL_BUNNY;
       data.clear();
       const OBJFile m{"bunny.obj", true};
-      #ifndef SAUCE
+      #ifdef SAUCE
         writeObjData(m, getDegenColors());
       #endif
-      #ifdef SAUCE
+      #ifndef SAUCE
         writeObjData(m, getBoringColors());
       #endif
     }else{
