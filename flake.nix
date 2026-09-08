@@ -13,6 +13,7 @@
         "x86_64-linux"
         "aarch64-linux"
         "riscv64-linux"
+        "armv7l-linux"
         "aarch64-darwin"
       ];
     in
@@ -21,11 +22,12 @@
       let
         pkgs = import nixpkgs { inherit system; };
         lib = pkgs.lib;
-        
+
         glfw-configured = pkgs.glfw.overrideAttrs (old: {
-          cmakeFlags = (old.cmakeFlags or []) ++ [
+          cmakeFlags = (old.cmakeFlags or [ ]) ++ [
             (pkgs.lib.cmakeBool "GLFW_BUILD_WAYLAND" false)
-          ];});
+          ];
+        });
 
         nativeBuildInputs = with pkgs; [
           gnumake
@@ -67,7 +69,7 @@
           '';
         };
         cgude-build =
-          number: name:
+          number: pname: sauce:
           let
             padFront =
               string: padding: targetLength:
@@ -76,13 +78,16 @@
               else
                 string;
             paddedNum = padFront (toString number) "0" 2;
-            path = "${paddedNum}_${name}";
+            path = "${paddedNum}_${pname}";
           in
           pkgs.stdenv.mkDerivation {
-            pname = "cgude-${lib.toLower name}";
+            inherit pname nativeBuildInputs buildInputs;
             version = "1.0.0";
             src = pkgs.lib.cleanSource ./.;
-            inherit nativeBuildInputs buildInputs;
+
+            patchPhase = lib.optionalString sauce ''
+              substituteInPlace ${path}/makefile --replace 'CFLAGS=-c' 'CFLAGS=-DSAUCE -c'
+            '';
 
             buildPhase = ''
               runHook preBuild
@@ -104,32 +109,43 @@
               runHook postInstall
             '';
           };
+
         tasks = {
-          cg-obj = cgude-build 1 "OBJ";
-          cg-intersect = cgude-build 2 "Intersect";
-          cg-splines = cgude-build 3 "Splines";
-          cg-color = cgude-build 4 "Color";
-          cg-diffuse = cgude-build 5 "Diffuse";
-          cg-phong = cgude-build 6 "Phong";
-          #cg-raycast = cgude-build 7 "Raycasting";
-          #cg-texturing = cgude-build 9 "Texturing";
-          #cg-hellogl = cgude-build 10 "HelloGL";
-          #cg-triforce = cgude-build 11 "Triforce";
-          #cg-dendritegrowth = cgude-build 12 "DendriteGrowth";
+          "OBJ" = 1;
+          "Intersect" = 2;
+          "Splines" = 3;
+          "Color" = 4;
+          "Diffuse" = 5;
+          "Phong" = 6;
         };
+        saucyTasks = lib.attrsets.mapAttrs' (name: value: let 
+          pname = lib.toLower "${name}-saucy";
+        in {
+          name = pname;
+          value = cgude-build value name true;
+        }) tasks;
+        boringTasks = lib.attrsets.mapAttrs' (name: value: let 
+          pname = lib.toLower name;
+        in {
+          name = pname;
+          value = cgude-build value name false;
+        }) tasks;
+        allTasks = boringTasks // saucyTasks;
       in
       {
         packages = {
           default = pkgs.symlinkJoin {
             name = "cgude-tasks";
-            paths = builtins.attrValues tasks;
+            paths = builtins.attrValues boringTasks;
           };
         }
-        // tasks;
+        // allTasks;
+
         apps = builtins.mapAttrs (name: drv: {
           type = "app";
           program = "${pkgs.writeShellScript "cgude-run-${name}" "exec $(find ${drv}/ -type f -executable | head -1)"}";
-        }) tasks;
+        }) allTasks;
+
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
             gnumake
