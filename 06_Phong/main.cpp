@@ -9,6 +9,11 @@
 class MyGLApp : public GLApp
 {
 public:
+  PhongShader *baseShader;
+  Vertex baseVertex1;
+  Vertex baseVertex2;
+  Vertex baseVertex3;
+
   Image image{ 600, 600 };
 
   MyGLApp() : GLApp{ 600, 600, 1, "Phong Lighting" } {}
@@ -80,12 +85,35 @@ public:
 
     // create and draw the bump-phong shaded triangle
     Triangle triangle5(v1, v4, v2, bump);
+    baseShader = new PhongShader(phongShader);
+    baseVertex1 = v1;
+    baseVertex2 = v4;
+    baseVertex3 = v2;
     triangle5.draw(image);
   }
 
   virtual void draw() override {
     drawImage(image);
   }
+
+  float triangleFunction(float t) {
+    return std::fmaxf(1 - std::fabsf(t), 0.0f);
+  }
+
+#ifdef SAUCE
+  virtual void animate(double animationTime) override {
+    const float maxCellSize = 200.0f;
+    const float maxBumpHeight = 1.0f;
+    const float animationCycleTime = 10.0f;
+    float wholeTime, fractionalTime;
+    fractionalTime = std::modf(animationTime / animationCycleTime, &wholeTime);
+    const float trinalgeTime = triangleFunction(fractionalTime * 2.0f - 1.0f);
+    BumpPhongShader bumpShader{*baseShader, maxCellSize * trinalgeTime, maxBumpHeight * trinalgeTime};
+    Triangle animatedTriagle = Triangle{baseVertex1, baseVertex2, baseVertex3, bumpShader};
+    animatedTriagle.draw(image);
+    drawImage(image);
+  }
+#endif
 
 } myApp;
 
