@@ -125,50 +125,57 @@
           "SAUCE"
         ];
 
-        allTasks =
+        allOptions =
           with builtins // lib;
-          mapAttrs (drvname: drvattrs: cgude-build drvattrs.index drvattrs.task drvattrs.options) (
-            foldl (acc: elem: acc // elem) { } (
-              flatten (
-                map
-                  (
-                    currentConfig:
-                    mapAttrs' (
-                      task: index:
-                      let
-                        selectedOptions = attrNames (filterAttrs (_: v: v) currentConfig);
-                      in
-                      {
-                        name = toLower (concatStringsSep "-" ([ task ] ++ selectedOptions));
-                        value = {
-                          inherit index task;
-                          options = selectedOptions;
-                        };
-                      }
-                    ) tasks
-                  )
-                  (
-                    cartesianProduct (
-                      listToAttrs (
-                        map (option: {
-                          name = option;
-                          value = [
-                            true
-                            false
-                          ];
-                        }) options
-                      )
+          foldl (acc: elem: acc // elem) { } (
+            flatten (
+              map
+                (
+                  currentConfig:
+                  mapAttrs' (
+                    task: index:
+                    let
+                      selectedOptions = attrNames (filterAttrs (_: v: v) currentConfig);
+                    in
+                    {
+                      name = toLower (concatStringsSep "-" ([ task ] ++ selectedOptions));
+                      value = {
+                        inherit index task;
+                        options = selectedOptions;
+                      };
+                    }
+                  ) tasks
+                )
+                (
+                  cartesianProduct (
+                    listToAttrs (
+                      map (option: {
+                        name = option;
+                        value = [
+                          true
+                          false
+                        ];
+                      }) options
                     )
                   )
-              )
+                )
             )
           );
+
+        allTasks = lib.mapAttrs (
+          drvname: drvattrs: cgude-build drvattrs.index drvattrs.task drvattrs.options
+        ) allOptions;
+
+        boringTasks = lib.mapAttrs (
+          drvname: drvattrs: cgude-build drvattrs.index drvattrs.task drvattrs.options
+        ) (lib.filterAttrs (_: drvattrs: builtins.length drvattrs.options == 0) allOptions);
+
       in
       {
         packages = {
           default = pkgs.symlinkJoin {
             name = "cgude-tasks";
-            paths = builtins.attrValues allTasks;
+            paths = builtins.attrValues boringTasks;
           };
         }
         // allTasks;
