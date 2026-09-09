@@ -24,7 +24,7 @@ public:
   const Vec3 topLeftCorner{-2.0f, 2.0f, 0.0f}, topRightCorner{2.0f, 2.0f, 0.0f};
   const Vec3 bottomLeftCorner{-2.0f, -2.0f, 0.0f}, bottomRightCorner{2.0f, -2.0f, 0.0f};
   const float lightRingHeight = 0.0f;
-  std::vector<struct Light> lights;
+  std::vector<struct Light> lights; 
 
   Vec3 convertHtmlColorToOpenGlColor(const std::string html) {
     std::string htmlR = html.substr(1, 2);
@@ -140,22 +140,42 @@ public:
     GL(glDisable(GL_CULL_FACE));
     GL(glClearColor(0,0,0,0));
 
-    const struct Light keyLight = {convertCatesianToPolar(Vec2{0.0f,4.0f}), Vec3{1.0f, 1.0f, 1.0f}};
-    const struct Light fillLight = {{keyLight.position.radius, 0.0f}, convertHtmlColorToOpenGlColor("#5BCFFA")};
-    const struct Light rimLight = {{keyLight.position.radius, 0.0f}, convertHtmlColorToOpenGlColor("#F5A9B8")};
+#ifdef SAUCE
+    Vec3 keyLightColor = Vec3{1.0, 1.0, 1.0}; //White
+#else
+    Vec3 keyLightColor = Vec3{1.0f, 0.0f, 0.0f}; //Red
+#endif
+#if defined(EXTRA) && !defined(SAUCE)
+    const Vec3 fillLightColor = Vec3{0.0f, 1.0f, 0.0f}; //Green
+    const Vec3 rimLightColor = Vec3{0.0f, 0.0f, 1.0f}; //Blue
+#endif
+#if defined(EXTRA) && defined(SAUCE)
+    keyLightColor = Vec3{1.0f, 1.0f, 1.0f};
+    const Vec3 fillLightColor = convertHtmlColorToOpenGlColor("#5BCFFA");
+    const Vec3 rimLightColor = convertHtmlColorToOpenGlColor("#F5A9B8");
+#endif
+    const struct Light keyLight = {convertCatesianToPolar(Vec2{0.0f,4.0f}), keyLightColor};
+#if defined(SAUCE) && defined(EXTRA)
+    const struct Light fillLight = {{keyLight.position.radius, 0.0f}, fillLightColor};
+    const struct Light rimLight = {{keyLight.position.radius, 0.0f}, rimLightColor};
     lights = {keyLight, fillLight, rimLight};
+#else
+    lights = {keyLight};
+#endif
     for(size_t currentLight = 0; currentLight < lights.size(); currentLight++) {
       lights[currentLight].position.angle += 2.0f * M_PI / lights.size() * currentLight;
     }
     updateImage();
   }
 
+#if defined(EXTRA)
   const float rotationSpeed = 1.0f;
   virtual void animate(double animationTime) override {
     float angle = animationTime * rotationSpeed;
     rotateLightRing(angle);
     updateImage();
   }
+#endif
 
   virtual void draw() override {
     GL(glClear(GL_COLOR_BUFFER_BIT));
