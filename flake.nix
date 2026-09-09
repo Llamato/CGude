@@ -1,39 +1,39 @@
 {
-  description = "";
-  
-  outputs = { self, nixpkgs }: let
-    systems = [
-      "x86_64-linux"
-      "aarch64-linux"
-      "x86_64-darwin"
-      "aarch64-darwin"
-      "armv7l-linux"
-    ];
-    
-    forAllSystems = nixpkgs.lib.genAttrs systems;
-    pkgsFor = system: import nixpkgs { inherit system; };
-  in {
-    packages = forAllSystems (system:
+  description = "A development environment for completing homework tasks based on the cgude opengl framework";
+
+  inputs = {
+    nixpkgs.url = "github:NixOs/nixpkgs/nixos-26.05";
+    flake-utils.url = "github:numtide/flake-utils";
+  };
+
+  outputs =
+    { self, nixpkgs, ... }@inputs:
+    let
+      supportedSystems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "riscv64-linux"
+        "armv7l-linux"
+        "aarch64-darwin"
+      ];
+    in
+    inputs.flake-utils.lib.eachSystem supportedSystems (
+      system:
       let
-        padFront = string: padding: targetLength: 
-          if (builtins.stringLength string) < targetLength 
-          then padFront (padding + string) padding targetLength 
-          else string;
-        
-        lib = nixpkgs.lib;
-        pkgs = pkgsFor system;
-        
+        pkgs = import nixpkgs { inherit system; };
+        lib = pkgs.lib;
+
         glfw-configured = pkgs.glfw.overrideAttrs (old: {
-          cmakeFlags = (old.cmakeFlags or []) ++ [
+          cmakeFlags = (old.cmakeFlags or [ ]) ++ [
             (pkgs.lib.cmakeBool "GLFW_BUILD_WAYLAND" false)
           ];
         });
-        
+
         nativeBuildInputs = with pkgs; [
-          gnumake 
+          gnumake
           gcc
         ];
-        
+
         buildInputs = with pkgs; [
           glfw-configured
           glew
@@ -47,20 +47,19 @@
           libXcursor
           libXi
         ];
-        
-        # Build Utils library
+
         cgude-utils = pkgs.stdenv.mkDerivation {
           pname = "cgude-utils";
           version = "1.0.0";
           src = pkgs.lib.cleanSource ./Utils;
           inherit nativeBuildInputs buildInputs;
-          
+
           buildPhase = ''
             runHook preBuild
             make CXX=g++ CC=g++
             runHook postBuild
           '';
-          
+
           installPhase = ''
             runHook preInstall
             mkdir -p $out
@@ -69,66 +68,133 @@
             runHook postInstall
           '';
         };
-        
-        # Function to build individual assignments
-        cgude-build = number: name: let
-          paddedNum = padFront (builtins.toString number) "0" 2;
-          path = "${paddedNum}_${name}";
-        in pkgs.stdenv.mkDerivation {
-          pname = "cgude-${lib.toLower name}";
-          version = "1.0.0";
-          src = pkgs.lib.cleanSource ./.;
-          inherit nativeBuildInputs buildInputs;
-          
-          buildPhase = ''
-            runHook preBuild
-            mkdir -p Utils/build/native
-            cp ${cgude-utils}/*.o Utils/build/native 2>/dev/null || true
-            cd ${path}
-            make CXX=g++ CC=g++ LDFLAGS="-lstdc++"
-            cd ..
-            runHook postBuild
-          '';
-          
-          installPhase = ''
-            runHook preInstall
-            mkdir -p $out
-            find ${path}/build -maxdepth 1 -type f -exec cp {} $out \;
-            if [ -d ${path}/Datasets ]; then
-              find ${path}/Datasets -maxdepth 1 -type f -exec cp {} $out \;
-            fi
-            runHook postInstall
-          '';
-        };
-        
-      in {
-        inherit cgude-utils;
+        cgude-build =
+          number: pname: options:
+          with builtins // lib;
+          let
+            padFront =
+              string: padding: targetLength:
+              if (stringLength string) < targetLength then
+                padFront (padding + string) padding targetLength
+              else
+                string;
+            paddedNum = padFront (toString number) "0" 2;
+            path = "${paddedNum}_${pname}";
+            flags = map (option: "-D" + option) options;
+          in
+          pkgs.stdenv.mkDerivation {
+            inherit pname nativeBuildInputs buildInputs;
+            version = "1.0.0";
+            src = cleanSource ./.;
 
-        cg-obj = cgude-build 1 "OBJ";
-        cg-intersect = cgude-build 2 "Intersect";
-        cg-splines = cgude-build 3 "Splines";
-        cg-color = cgude-build 4 "Color";
-        cg-diffuse = cgude-build 5 "Diffuse";
-        cg-Phong = cgude-build 6 "Phong";
-        cg-raycast = cgude-build 7 "Raycasting";
-        cg-texturing = cgude-build 9 "Texturing";
-        cg-hellogl = cgude-build 10 "HelloGL";
-        cg-triforce = cgude-build 11 "Triforce";
-        cg-dendritegrowth = cgude-build 12 "DendriteGrowth";
-      }
-    );
-    
-    devShells = forAllSystems (system:
-      let 
-        pkgs = pkgsFor system;
-        
-        glfw-configured = pkgs.glfw.overrideAttrs (old: {
-          cmakeFlags = (old.cmakeFlags or []) ++ [
-            (pkgs.lib.cmakeBool "GLFW_BUILD_WAYLAND" false)
-          ];
-        });
-      in {
-        default = pkgs.mkShell {
+            patchPhase = optionalString (length options > 0) ''
+              substituteInPlace ${path}/makefile --replace 'CFLAGS=-c' 'CFLAGS=${concatStringsSep " " flags} -c'
+            '';
+
+            buildPhase = ''
+              runHook preBuild
+              mkdir -p Utils/build/native
+              cp ${cgude-utils}/*.o Utils/build/native 2>/dev/null || true
+              cd ${path}
+              make CXX=g++ CC=g++ LDFLAGS="-lstdc++"
+              cd ..
+              runHook postBuild
+            '';
+
+            installPhase = ''
+              runHook preInstall
+              mkdir -p $out
+              find ${path}/build -maxdepth 1  -type f -executable -exec cp {} $out \;
+              if [ -d ${path}/Datasets ]; then
+                find ${path}/Datasets -maxdepth 1 -type f -exec cp {} $out \;
+              fi
+              runHook postInstall
+            '';
+          };
+        tasks = {
+          "OBJ" = 1;
+          "Intersect" = 2;
+          "Splines" = 3;
+          "Color" = 4;
+          "Diffuse" = 5;
+          "Phong" = 6;
+        };
+
+        options = [
+          "EXTRA"
+          "SAUCE"
+        ];
+
+        allOptions =
+          with builtins // lib;
+          foldl (acc: elem: acc // elem) { } (
+            flatten (
+              map
+                (
+                  currentConfig:
+                  mapAttrs' (
+                    task: index:
+                    let
+                      selectedOptions = attrNames (filterAttrs (_: v: v) currentConfig);
+                    in
+                    {
+                      name = toLower (concatStringsSep "-" ([ task ] ++ selectedOptions));
+                      value = {
+                        inherit index task;
+                        options = selectedOptions;
+                      };
+                    }
+                  ) tasks
+                )
+                (
+                  cartesianProduct (
+                    listToAttrs (
+                      map (option: {
+                        name = option;
+                        value = [
+                          true
+                          false
+                        ];
+                      }) options
+                    )
+                  )
+                )
+            )
+          );
+
+        allTasks = lib.mapAttrs (
+          drvname: drvattrs: cgude-build drvattrs.index drvattrs.task drvattrs.options
+        ) allOptions;
+
+        boringTasks = lib.mapAttrs (
+          drvname: drvattrs: cgude-build drvattrs.index drvattrs.task drvattrs.options
+        ) (lib.filterAttrs (_: drvattrs: builtins.length drvattrs.options == 0) allOptions);
+
+      in
+      {
+        packages = {
+          default = pkgs.symlinkJoin {
+            name = "cgude-tasks";
+            paths = builtins.attrValues boringTasks;
+          };
+        }
+        // allTasks;
+
+        apps = builtins.mapAttrs (
+          name: drv:
+          let
+            runScript = ''
+              cd ${drv}
+              exec $(find . -type f -executable | head -21)
+            '';
+          in
+          {
+            type = "app";
+            program = "${pkgs.writeShellScript "cgude-run-${name}" runScript}";
+          }
+        ) allTasks;
+
+        devShells.default = pkgs.mkShell {
           packages = with pkgs; [
             gnumake
             gcc
@@ -148,7 +214,7 @@
             libXcursor
             libXi
           ];
-          
+
           shellHook = ''
             export CC=g++
             export CXX=g++
@@ -158,5 +224,4 @@
         };
       }
     );
-  };
 }
