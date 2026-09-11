@@ -4,6 +4,11 @@
 class Sphere : public IntersectableObject
 {
 
+private:
+	Vec3 center;
+	Vec3 radius;
+	Material material;
+
 public:
 	Sphere(const Vec3& center, float radius, const Material& material);
     virtual ~Sphere() {}

@@ -16,8 +16,23 @@ void Raytracer::render(Image& img)
 {
     RaySetup rs = computeRaySetup(img);
 
-    // TODO: implement the missing parts of this method according to the exercise
-
+    // Completed: implement the missing parts of this method according to the exercise
+    for(uint32_t currentRow = 0; currentRow < img.height; currentRow++) {
+        for(uint32_t currentColumn = 0; currentColumn < img.width; currentColumn++) {
+            Vec3 currentColor = Vec3{0.0f, 0.0f, 0.0f};
+            for(uint32_t currentSubpixelY = 0; currentSubpixelY < numSamplesY; currentSubpixelY++) {
+                for(uint32_t currentSubpixelX = 0; currentSubpixelX < numSamplesX; currentSubpixelX++) {
+                    Ray currentPixelRay = computeRay(currentColumn + currentSubpixelX / numSamplesX, currentRow + currentSubpixelY / numSamplesY, rs);
+                    currentColor = currentColor + traceRay(currentPixelRay);
+                }
+            }
+            currentColor = currentColor / (numSamplesX * numSamplesY);
+            img.setNormalizedValue(currentColumn, currentRow, 0, currentColor.r);
+            img.setNormalizedValue(currentColumn, currentRow, 1, currentColor.g);
+            img.setNormalizedValue(currentColumn, currentRow, 2, currentColor.b);
+            img.setNormalizedValue(currentColumn, currentRow, 3, 1.0f);
+        }
+    }
 }
 
 Vec3 Raytracer::traceRay(const Ray& r)

@@ -55,5 +55,8 @@ std::optional<Intersection> Sphere::intersect(const Ray& ray) const {
   // Then compute the normalized texture coordinates u,v.
   // In a last step scale and offset the coordinates by the given values.
 
+  r.x = r.x * cosf(t);
+  r.y = r.y * sinf(t);
+
   return Intersection{material, normal, {}, t };
 }
