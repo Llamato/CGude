@@ -46,7 +46,7 @@ std::optional<Intersection> Scene::intersect(const Ray& ray, bool shadowRay) con
 /// <returns>final color value computed for this ray</returns>
 Vec3 Scene::traceRay(const Ray& ray, float IOR, int recDepth) const
 {
-	// TODO: implement the missing parts of this method according to the exercise
+	// Completed: implement the missing parts of this method according to the exercise
 
 	// no intersection found
 	std::optional<Intersection> opt_intersection = intersect(ray, false);
@@ -60,8 +60,21 @@ Vec3 Scene::traceRay(const Ray& ray, float IOR, int recDepth) const
 	Vec3 localColor;
 	for (std::shared_ptr<const LightSource> ls : lightSources)
 	{
+		//Abient here because ambient light should not be affected by shadows
 		Vec3 ambient = inter.getMaterial().getAmbient() * ls->getAmbient();
 
+		//Shadow code
+		float epsilon = 0.007f;
+		//float hardness = 0.0000007f;
+		float hardness = 0.0f;
+		localColor = localColor + ambient;
+		Vec3 lightDirection = ls->getDirection(interPos);
+		Ray shadowRay = Ray{interPos + inter.getNormal() * epsilon, lightDirection};
+		std::optional<Intersection> shadowHit = intersect(shadowRay, true);
+		bool isShadow = shadowHit.has_value();
+		if (isShadow) continue;
+
+		//Noraml light code
 		float d = Vec3::dot(ls->getDirection(interPos), inter.getNormal());
 		Vec3 diffuse = inter.getMaterial().getDiffuse() * ls->getDiffuse() * d;
 		diffuse = Vec3::clamp(diffuse, 0.0f, 1.0f);
