@@ -118,6 +118,11 @@
           "Color" = 4;
           "Diffuse" = 5;
           "Phong" = 6;
+          "Raycasting" = 7;
+          "Raytracing" = 8;
+          "Texturing" = 9;
+          "HelloGL" = 10;
+          "Triforce" = 11;
         };
 
         options = [
