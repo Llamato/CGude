@@ -84,7 +84,7 @@ Vec3 Scene::traceRay(const Ray& ray, float IOR, int recDepth) const
 		Vec3 specular = inter.getMaterial().getSpecular() * ls->getSpecular() * s;
 		specular = Vec3::clamp(specular, 0.0f, 1.0f);
 
-		localColor = localColor + ambient + diffuse + specular;
+		localColor = localColor + diffuse + specular;
 	}
 
 	return localColor;
