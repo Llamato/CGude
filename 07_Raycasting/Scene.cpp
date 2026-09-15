@@ -90,6 +90,39 @@ Vec3 Scene::traceRay(const Ray& ray, float IOR, int recDepth) const
 	return localColor;
 }
 
+Vec3 htmlColorToOpenGlColor(const std::string html) {
+    std::string htmlR = html.substr(1, 2);
+    std::string htmlG = html.substr(3, 2);
+    std::string htmlB = html.substr(5, 2);
+    unsigned int absoluteR = std::stoul(htmlR, nullptr, 16);
+    unsigned int absoluteG = std::stoul(htmlG, nullptr, 16);
+    unsigned int absoluteB = std::stoul(htmlB, nullptr, 16);
+    float relativeR = static_cast<float>(absoluteR) / UINT8_MAX;
+    float relativeG = static_cast<float>(absoluteG) / UINT8_MAX;
+    float relativeB = static_cast<float>(absoluteB) / UINT8_MAX; 
+    return Vec3{relativeR, relativeG, relativeB};
+  }
+
+  std::vector<Vec3> getDegenColors(void) {
+    Vec3 blue = htmlColorToOpenGlColor("#5BCFFA");
+    Vec3 pink = htmlColorToOpenGlColor("#F5A9B8");
+    Vec3 white = Vec3{1.0f, 1.0f, 1.0f};
+    std::vector<Vec3> colors;
+    colors.push_back(blue);
+    colors.push_back(pink);
+    colors.push_back(white);
+    colors.push_back(pink);
+    colors.push_back(blue);
+    return colors;
+  }
+
+  Vec3 rotateColorWheel(const std::vector<Vec3>& colors) {
+    static size_t currentWheelColor = 0;
+    Vec3 result = colors[currentWheelColor % colors.size()];
+    currentWheelColor = (currentWheelColor + 1) % colors.size();
+    return result;
+}
+
 Scene Scene::genSimpleScene()
 {
 	// create an empty scene
@@ -101,19 +134,41 @@ Scene Scene::genSimpleScene()
 	// attach the light source to the scene
 	s.addLight(l);
 
+#ifdef SAUCE
+	std::vector<Vec3> degenColors = getDegenColors();
+	const float diffuseAmbientRatio = 0.5f / 0.3f;
+#endif
+
 	// create the bluish material for the right sphere
 	// vec3 are treated as color values in the range [0, 1]
+#ifndef SAUCE
 	Material m(Vec3(0.0f, 0.0f, 0.3f), Vec3(0.0f, 0.0f, 0.5f), Vec3(1.0f, 1.0f, 1.0f), 8, 0.2f, 1.52f);
-
+#endif
+#ifdef SAUCE
+	Vec3 ambientColor = rotateColorWheel(degenColors);
+	Material m(ambientColor, diffuseAmbientRatio * ambientColor, Vec3(1.0f, 1.0f, 1.0f), 8, 0.2f, 1.52f);
+#endif
 	// create a sphere, apply the material above to it and attach it to the scene
 	s.addObject(std::make_shared<Sphere>(Vec3{ 0.7f, -0.4f, -2.0f }, 0.9f, m));
 
 	// create the red material and apply it to the left sphere
-	m = Material(Vec3{ 0.3f, 0.0f, 0.0f }, Vec3{ 0.5f, 0.0f, 0.0f }, Vec3{ 1.0f, 1.0f, 1.0f }, 8, 1);
+#ifndef SAUCE
+	m = Material(Vec3{ 0.3f, 0.0f, 0.0f }, Vec3{ 0.5f, 0.0f, 0.0f }, Vec3(1.0f, 1.0f, 1.0f), 8, 0.2f, 1.52f);
+#endif
+#ifdef SAUCE
+	ambientColor = rotateColorWheel(degenColors);
+	m = Material(ambientColor, diffuseAmbientRatio * ambientColor, Vec3{1.0f, 1.0f, 1.0f}, 8, 0.2f, 1.52f);
+#endif
 	s.addObject(std::make_shared<Sphere>(Vec3{ -0.9f, -0.1f, -2.2f }, 0.6f, m));
 
 	// create the yellowish material and apply it to the big sphere in the back
-	m = Material(Vec3{ 0.3f, 0.3f, 0.0f }, Vec3{ 0.7f, 0.7f, 0.0f }, Vec3{ 1.0f, 1.0f, 0.0f }, 8, 0.3f);
+#ifndef SAUCE
+	m = Material(Vec3{ 0.3f, 0.3f, 0.0f }, Vec3{ 0.7f, 0.7f, 0.0f }, Vec3(1.0f, 1.0f, 1.0f), 8, 0.2f, 1.52f);
+#endif
+#ifdef SAUCE
+	ambientColor = rotateColorWheel(degenColors);
+	m = Material(ambientColor, diffuseAmbientRatio * ambientColor, Vec3{1.0f, 1.0f, 0.0f}, 8, 0.3f);
+#endif
 	s.addObject(std::make_shared<Sphere>(Vec3{ 0, 4, -8 }, 3.9f, m));
 
 	// create the white ground plane
