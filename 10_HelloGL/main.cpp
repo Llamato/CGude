@@ -6,35 +6,80 @@
 
 #include <GLProgram.h>
 
+#define FLOATS_PER_VERTEX 3
+#define VERTS_PER_TRIANGLE 3
+#define NUM_TRIANGLES 2
+
+#define ERROR_MESSAGE_MAX_LENGTH 255
+
 GLuint vbo;
 GLuint vao;
 GLuint program;
 
 // triangle vertex position data
-constexpr float triangle[] = {
-  0.0f,  0.5f, 0.0f, // top
-  -0.5f, -0.5f, 0.0f,  // bottom left
-  0.5f, -0.5f, 0.0f  // bottom right
+constexpr float triangles[] = {
+  -0.5f,  0.5f, 0.0f, //Top left
+  0.5f, 0.5f, 0.0f,  //Top right
+  0.5f, -0.5f, 0.0f, //Bottom right
+  -0.5f,  0.5f, 0.0f, //Top left
+  -0.5f, -0.5f, 0.0f, //Bottom left
+  0.5f, -0.5f, 0.0f //Bottom right
 };
 
 const GLchar* vertexShaderSource{
 R"(in vec3 vPos;
+out vec2 vNdc;
 void main()
 {
-  gl_Position = vec4(vPos, 1.0);
+  vec4 clip = vec4(vPos, 1.0);
+  gl_Position = clip;
+  vNdc = clip.xy;
 }
 )"
 };
 
 const GLchar* fragmentShaderSource{
 R"(out vec4 fragColor;
+in vec2 vNdc;
+uniform vec3 colorOrange;
+uniform vec3 colorGreen;
+
 void main()
 {
-  fragColor = vec4(1.0f, 1.0f, 1.0f, 1.0);
+  vec2 vNorminal = vNdc + vec2(0.5);
+  fragColor = mix(vec4(colorOrange, 1.0), vec4(colorGreen, 1.0), float(1.0 - vNorminal.x > vNorminal.y));
 }
 )"
 };
 
+Vec3 htmlColorToOpenGlColor(const std::string html) {
+  std::string htmlR = html.substr(1, 2);
+  std::string htmlG = html.substr(3, 2);
+  std::string htmlB = html.substr(5, 2);
+  unsigned int absoluteR = std::stoul(htmlR, nullptr, 16);
+  unsigned int absoluteG = std::stoul(htmlG, nullptr, 16);
+  unsigned int absoluteB = std::stoul(htmlB, nullptr, 16);
+  float relativeR = static_cast<float>(absoluteR) / UINT8_MAX;
+  float relativeG = static_cast<float>(absoluteG) / UINT8_MAX;
+  float relativeB = static_cast<float>(absoluteB) / UINT8_MAX; 
+  return Vec3{relativeR, relativeG, relativeB};
+}
+
+GLint getGlUniformLocation(GLuint shaderProgram, const char* varname) {
+  GLint uniform = glGetUniformLocation(shaderProgram, varname);
+  char infoLog[ERROR_MESSAGE_MAX_LENGTH];
+  glGetProgramInfoLog(shaderProgram, ERROR_MESSAGE_MAX_LENGTH, NULL, infoLog);
+  if(uniform == GL_INVALID_VALUE || uniform == GL_INVALID_OPERATION){
+    printf("%s %s\nError (%i): %s\n", varname, "uniform could not be found!", uniform, infoLog);
+    return -1;
+  }
+  return uniform;
+}
+
+void setGlUniform3f(GLuint shaderProgram, const char* varname, Vec3 vector) {
+  GLuint uniform = getGlUniformLocation(shaderProgram, varname);
+  if(uniform != GL_INVALID_VALUE && uniform != GL_INVALID_OPERATION) glUniform3f(uniform, vector.x, vector.y, vector.z);
+}
 
 static void draw(void* arg=nullptr) {
   GL( glClearColor(0.0f, 0.0f, 0.0f, 1.0f) );
@@ -42,7 +87,9 @@ static void draw(void* arg=nullptr) {
   
   GL( glBindVertexArray(vao) );
   GL( glUseProgram(program) );
-  GL( glDrawArrays(GL_TRIANGLES, 0, 3) );
+  setGlUniform3f(program, "colorOrange", htmlColorToOpenGlColor("#e58033"));
+  setGlUniform3f(program, "colorGreen", htmlColorToOpenGlColor("#33e533"));
+  GL( glDrawArrays(GL_TRIANGLES, 0, NUM_TRIANGLES * VERTS_PER_TRIANGLE) );
   GL( glBindVertexArray(0) );
 }
 
@@ -82,10 +129,10 @@ static void setupGeometry() {
   // upload vertex positions to VBO
   GL( glGenBuffers(1, &vbo) );
   GL( glBindBuffer(GL_ARRAY_BUFFER, vbo) );
-  GL( glBufferData(GL_ARRAY_BUFFER, sizeof(triangle), triangle, GL_STATIC_DRAW) );
+  GL( glBufferData(GL_ARRAY_BUFFER, sizeof(triangles), triangles, GL_STATIC_DRAW) );
 
   GL( glEnableVertexAttribArray(0) );
-  GL( glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0) );
+  GL( glVertexAttribPointer(0, FLOATS_PER_VERTEX, GL_FLOAT, GL_FALSE, VERTS_PER_TRIANGLE * sizeof(float), (void*)0) );
 
   GL( glBindVertexArray(0) );
 }
