@@ -9,7 +9,6 @@
 #define FLOATS_PER_VERTEX 3
 #define VERTS_PER_TRIANGLE 3
 #define NUM_TRIANGLES 2
-
 #define ERROR_MESSAGE_MAX_LENGTH 255
 
 GLuint vbo;
@@ -37,21 +36,39 @@ void main()
 }
 )"
 };
-
+#ifndef EXTRA
 const GLchar* fragmentShaderSource{
 R"(out vec4 fragColor;
 in vec2 vNdc;
-uniform vec3 colorOrange;
+uniform vec3 colorRed;
 uniform vec3 colorGreen;
 
 void main()
 {
   vec2 vNorminal = vNdc + vec2(0.5);
-  fragColor = mix(vec4(colorOrange, 1.0), vec4(colorGreen, 1.0), float(1.0 - vNorminal.x > vNorminal.y));
+  fragColor = mix(vec4(colorRed, 1.0), vec4(colorGreen, 1.0), float(1.0 - vNorminal.x > vNorminal.y));
 }
 )"
 };
+#endif
+#ifdef EXTRA
+const GLchar* fragmentShaderSource{
+R"(out vec4 fragColor;
+in vec2 vNdc;
+uniform vec3 colorRed;
+uniform vec3 colorGreen;
+uniform vec3 colorBlue;
 
+void main()
+{
+  vec2 vNorminal = vNdc + vec2(0.5);
+  vec2 vSection1 = vNdc + vec2(0.5) * 0.66;
+  vec2 vSection2 = vNdc + vec2(0.5) * 1.33;
+  fragColor = mix(vec4(colorRed, 1.0), mix(vec4(colorGreen, 1.0), vec4(colorBlue, 1.0), float(1.0 - vSection2.x > vNorminal.y)), float(1.0 - vSection1.x > vNorminal.y));
+}
+)"
+};
+#endif
 Vec3 htmlColorToOpenGlColor(const std::string html) {
   std::string htmlR = html.substr(1, 2);
   std::string htmlG = html.substr(3, 2);
@@ -87,8 +104,25 @@ static void draw(void* arg=nullptr) {
   
   GL( glBindVertexArray(vao) );
   GL( glUseProgram(program) );
-  setGlUniform3f(program, "colorOrange", htmlColorToOpenGlColor("#e58033"));
+
+#if !defined(EXTRA) && !defined(SAUCE)
+  setGlUniform3f(program, "colorRed", htmlColorToOpenGlColor("#e58033"));
   setGlUniform3f(program, "colorGreen", htmlColorToOpenGlColor("#33e533"));
+#endif
+#if defined(EXTRA) && !defined(SAUCE)
+  setGlUniform3f(program, "colorRed", htmlColorToOpenGlColor("#FF0000"));
+  setGlUniform3f(program, "colorGreen", htmlColorToOpenGlColor("#00FF00"));
+  setGlUniform3f(program, "colorBlue", htmlColorToOpenGlColor("#0000FF"));
+#endif
+#if !defined(EXTRA) && defined(SAUCE)
+  setGlUniform3f(program, "colorRed", htmlColorToOpenGlColor("#5BCFFA"));
+  setGlUniform3f(program, "colorGreen", htmlColorToOpenGlColor("#F5A9B8"));
+#endif
+#if defined(EXTRA) && defined(SAUCE)
+  setGlUniform3f(program, "colorRed", htmlColorToOpenGlColor("#F5A9B8"));
+  setGlUniform3f(program, "colorGreen", htmlColorToOpenGlColor("#FFFFFF"));
+  setGlUniform3f(program, "colorBlue", htmlColorToOpenGlColor("#5BCFFA"));
+#endif
   GL( glDrawArrays(GL_TRIANGLES, 0, NUM_TRIANGLES * VERTS_PER_TRIANGLE) );
   GL( glBindVertexArray(0) );
 }
