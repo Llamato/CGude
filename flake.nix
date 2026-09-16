@@ -108,6 +108,9 @@
               if [ -d ${path}/Datasets ]; then
                 find ${path}/Datasets -maxdepth 1 -type f -exec cp {} $out \;
               fi
+              if [ -d ${path}/Shader ]; then
+                find ${path}/Shader -maxdepth 1 -type f -exec cp {} $out \;
+              fi
               runHook postInstall
             '';
           };

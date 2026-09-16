@@ -2,6 +2,23 @@
 
 #include <GLApp.h>
 
+#define NUM_TRIANGLES 3
+#define FLOATS_PER_POINT 3 
+#define FLOATS_PER_COLOR 3
+#define FLOATS_PER_VERTEX FLOATS_PER_POINT + FLOATS_PER_COLOR
+#define VERTICIES_PER_TRIANGLE 3
+#define FLOATS_PER_TRIANGLE VERTICIES_PER_TRIANGLE * FLOATS_PER_VERTEX
+
+#define ROTATION_PERIOD 10
+
+#define VERTEX_X_OFFSET 0
+#define VERTEX_Y_OFFSET 1
+#define VERTEX_Z_OFFSET 2
+#define COLOR_R_OFFSET 3
+#define COLOR_G_OFFSET 4
+#define COLOR_B_OFFSET 5
+
+
 class MyGLApp : public GLApp {
 public:
   Mat4 modelView{};
@@ -12,22 +29,84 @@ public:
   GLuint vbos{0};
   GLuint vaos{0};
   
-  const GLfloat vertexPositions[9] = {
-     1.5f, 2.0f, 0.0f,
-    -1.5f, 0.0f, 0.0f,
-     1.5f, 0.0f, 0.0f
-  };
+  GLfloat vertexData[NUM_TRIANGLES * VERTICIES_PER_TRIANGLE * FLOATS_PER_VERTEX];
+  Vec3 triangleCenterPoints[NUM_TRIANGLES];
+
+  Vec3 htmlColorToOpenGlColor(const std::string html) {
+    std::string htmlR = html.substr(1, 2);
+    std::string htmlG = html.substr(3, 2);
+    std::string htmlB = html.substr(5, 2);
+    unsigned int absoluteR = std::stoul(htmlR, nullptr, 16);
+    unsigned int absoluteG = std::stoul(htmlG, nullptr, 16);
+    unsigned int absoluteB = std::stoul(htmlB, nullptr, 16);
+    float relativeR = static_cast<float>(absoluteR) / UINT8_MAX;
+    float relativeG = static_cast<float>(absoluteG) / UINT8_MAX;
+    float relativeB = static_cast<float>(absoluteB) / UINT8_MAX; 
+    return Vec3{relativeR, relativeG, relativeB};
+  }
+
+  void setVertexColor(GLfloat* vertices, size_t vertexStart, Vec3 color) {
+    vertices[vertexStart + COLOR_R_OFFSET] = color.r;
+    vertices[vertexStart + COLOR_G_OFFSET] = color.g;
+    vertices[vertexStart + COLOR_B_OFFSET] = color.b;
+  }
+
+  void setTriangleColors(GLfloat* verticies, size_t triangleStart, Vec3 colorA, Vec3 colorB, Vec3 colorC) {
+    setVertexColor(verticies, triangleStart, colorA);
+    setVertexColor(verticies, triangleStart + FLOATS_PER_TRIANGLE, colorB);
+    setVertexColor(verticies, triangleStart + 2 * FLOATS_PER_TRIANGLE, colorC);
+  }
+
+  void generateEquilateralTriangle(GLfloat* vertices, size_t start, size_t stride, Vec3 center, float height){
+    const float halfBase = height / std::sqrt(3.0f);
+    Vec3 A = center + Vec3{ 0.0f,        height * 0.5f,  0.0f };
+    Vec3 B = center + Vec3{ -halfBase,  -height * 0.5f,  0.0f };
+    Vec3 C = center + Vec3{  halfBase,  -height * 0.5f,  0.0f };
+
+    const size_t startOffset = start * FLOATS_PER_POINT * VERTICIES_PER_TRIANGLE;
+    vertices[startOffset + VERTEX_X_OFFSET] = A.x;
+    vertices[startOffset + VERTEX_Y_OFFSET] = A.y;
+    vertices[startOffset + VERTEX_Z_OFFSET] = A.z;
+    vertices[startOffset + stride + VERTEX_X_OFFSET] = B.x;
+    vertices[startOffset + stride + VERTEX_Y_OFFSET] = B.y;
+    vertices[startOffset + stride + VERTEX_Z_OFFSET] = B.z;
+    vertices[startOffset + 2 * stride, VERTEX_X_OFFSET] = C.x;
+    vertices[startOffset + 2 * stride, VERTEX_Y_OFFSET] = C.y;
+    vertices[startOffset + 2 * stride, VERTEX_Z_OFFSET] = C.z;
+}
+
+void setupTriangles() {
+  const Vec3 colorRed = htmlColorToOpenGlColor("#FF0000");
+  const Vec3 colorMagenta = htmlColorToOpenGlColor("#FF00FF");
+  const Vec3 colorOrange = htmlColorToOpenGlColor("#FFAA00");
+  const Vec3 colorTurquesa = htmlColorToOpenGlColor("#00FFFF");
+  const Vec3 colorBlue = htmlColorToOpenGlColor("#0000FF");
+  const Vec3 colorYellow = htmlColorToOpenGlColor("#FFFF00");
+  const Vec3 colorGreen = htmlColorToOpenGlColor("#00FF00");
+  setTriangleColors(vertexData, 0, colorRed, colorMagenta, colorOrange);
+  setTriangleColors(vertexData, FLOATS_PER_TRIANGLE, colorMagenta, colorBlue, colorTurquesa);
+  setTriangleColors(vertexData, 2 * FLOATS_PER_TRIANGLE, colorYellow, colorGreen, colorTurquesa);
+
+  triangleCenterPoints[0] = Vec3{-0.5f , 0.0f, 0};
+  generateEquilateralTriangle(vertexData, 0, FLOATS_PER_VERTEX, triangleCenterPoints[0], .66f);
+  /*triangleCenterPoints[1] = Vec3{0.0f , 1.0f, 0};
+  generateEquilateralTriangle(vertexData, FLOATS_PER_VERTEX,  FLOATS_PER_VERTEX, triangleCenterPoints[1], .66f);
+  triangleCenterPoints[2] = Vec3{0.5f , 0.0f, 0};
+  generateEquilateralTriangle(vertexData, 2 * FLOATS_PER_VERTEX, FLOATS_PER_VERTEX, triangleCenterPoints[2], .66f);*/
+}
   
   MyGLApp()
     : GLApp(800,600,4,"Assignment 11 - Triforce")
   {}
   
   virtual void init() override {
+    setupTriangles();
     setupShaders();
     setupGeometry();
   }
 
-  virtual void animate(double animationTime) override {    
+  virtual void animate(double animationTime) override {
+    
   }
 
   virtual void draw() override {
@@ -36,7 +115,7 @@ public:
     GL(glUniformMatrix4fv(modelViewMatrixUniform, 1, GL_TRUE, modelView));
     
     GL(glBindVertexArray(vaos));
-    GL(glDrawArrays(GL_TRIANGLES, 0, sizeof(vertexPositions) / sizeof(vertexPositions[0]) / 3));
+    GL(glDrawArrays(GL_TRIANGLES, 0, sizeof(vertexData) / sizeof(vertexData[0]) / 3));
     GL(glBindVertexArray(0));
     GL(glUseProgram(0));
   }
@@ -95,23 +174,26 @@ public:
   
   void setupGeometry() {
     const GLint vertexPos = glGetAttribLocation(program, "vertexPosition");
+    const GLint vertexColor = glGetAttribLocation(program, "vertexColor");
     
     GL(glGenVertexArrays(1, &vaos));
     GL(glBindVertexArray(vaos));
     
     GL(glGenBuffers(1, &vbos));
     GL(glBindBuffer(GL_ARRAY_BUFFER, vbos));
-    GL(glBufferData(GL_ARRAY_BUFFER, sizeof(vertexPositions), vertexPositions,
-                    GL_STATIC_DRAW));
+    GL(glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), vertexData, GL_STATIC_DRAW));
     
     GL(glEnableVertexAttribArray(vertexPos));
-    GL(glVertexAttribPointer(vertexPos, 3, GL_FLOAT, GL_FALSE, 0, (void*)0));
+    GL(glVertexAttribPointer(vertexPos, FLOATS_PER_POINT, GL_FLOAT, FLOATS_PER_VERTEX, 0, (void*)0));
+    GL(glEnableVertexAttribArray(vertexColor));
+    GL(glVertexAttribPointer(vertexColor, FLOATS_PER_COLOR, GL_FLOAT, FLOATS_PER_VERTEX, 0, (void*)0));
     
     GL(glBindVertexArray(0););
   }
   
   virtual void keyboard(int key, int scancode, int action, int mods) override
   {
+
   }
 } myApp;
 
