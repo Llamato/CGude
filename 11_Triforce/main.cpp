@@ -5,7 +5,7 @@
 #define NUM_TRIANGLES 3
 #define FLOATS_PER_POINT 3 
 #define FLOATS_PER_COLOR 3
-#define FLOATS_PER_VERTEX FLOATS_PER_POINT + FLOATS_PER_COLOR
+#define FLOATS_PER_VERTEX (FLOATS_PER_POINT + FLOATS_PER_COLOR)
 #define VERTICIES_PER_TRIANGLE 3
 #define FLOATS_PER_TRIANGLE VERTICIES_PER_TRIANGLE * FLOATS_PER_VERTEX
 
@@ -32,6 +32,19 @@ public:
   GLfloat vertexData[NUM_TRIANGLES * VERTICIES_PER_TRIANGLE * FLOATS_PER_VERTEX];
   Vec3 triangleCenterPoints[NUM_TRIANGLES];
 
+  void debugPrintVertexArray() {
+    std::cout << "X\tY\tZ\tR\tG\tB\n";
+    for(size_t currentTriangle = 0; currentTriangle < NUM_TRIANGLES; currentTriangle++) {
+      for(size_t currentVertex = 0; currentVertex < VERTICIES_PER_TRIANGLE; currentVertex++) {
+        for(size_t currentFloat = 0; currentFloat < FLOATS_PER_VERTEX; currentFloat++) {
+          std::cout << vertexData[currentTriangle * VERTICIES_PER_TRIANGLE + currentVertex * FLOATS_PER_VERTEX + currentFloat] << '\t';
+        }
+        std::cout << '\n';
+      }
+      std::cout << "\n";
+    }
+  }
+
   Vec3 htmlColorToOpenGlColor(const std::string html) {
     std::string htmlR = html.substr(1, 2);
     std::string htmlG = html.substr(3, 2);
@@ -53,8 +66,8 @@ public:
 
   void setTriangleColors(GLfloat* verticies, size_t triangleStart, Vec3 colorA, Vec3 colorB, Vec3 colorC) {
     setVertexColor(verticies, triangleStart, colorA);
-    setVertexColor(verticies, triangleStart + FLOATS_PER_TRIANGLE, colorB);
-    setVertexColor(verticies, triangleStart + 2 * FLOATS_PER_TRIANGLE, colorC);
+    setVertexColor(verticies, triangleStart + FLOATS_PER_VERTEX, colorB);
+    setVertexColor(verticies, triangleStart + 2 * FLOATS_PER_VERTEX, colorC);
   }
 
   void generateEquilateralTriangle(GLfloat* vertices, size_t start, size_t stride, Vec3 center, float height){
@@ -62,17 +75,15 @@ public:
     Vec3 A = center + Vec3{ 0.0f,        height * 0.5f,  0.0f };
     Vec3 B = center + Vec3{ -halfBase,  -height * 0.5f,  0.0f };
     Vec3 C = center + Vec3{  halfBase,  -height * 0.5f,  0.0f };
-
-    const size_t startOffset = start * FLOATS_PER_POINT * VERTICIES_PER_TRIANGLE;
-    vertices[startOffset + VERTEX_X_OFFSET] = A.x;
-    vertices[startOffset + VERTEX_Y_OFFSET] = A.y;
-    vertices[startOffset + VERTEX_Z_OFFSET] = A.z;
-    vertices[startOffset + stride + VERTEX_X_OFFSET] = B.x;
-    vertices[startOffset + stride + VERTEX_Y_OFFSET] = B.y;
-    vertices[startOffset + stride + VERTEX_Z_OFFSET] = B.z;
-    vertices[startOffset + 2 * stride, VERTEX_X_OFFSET] = C.x;
-    vertices[startOffset + 2 * stride, VERTEX_Y_OFFSET] = C.y;
-    vertices[startOffset + 2 * stride, VERTEX_Z_OFFSET] = C.z;
+    vertices[start + VERTEX_X_OFFSET] = A.x;
+    vertices[start + VERTEX_Y_OFFSET] = A.y;
+    vertices[start + VERTEX_Z_OFFSET] = A.z;
+    vertices[start + stride + VERTEX_X_OFFSET] = B.x;
+    vertices[start + stride + VERTEX_Y_OFFSET] = B.y;
+    vertices[start + stride + VERTEX_Z_OFFSET] = B.z;
+    vertices[start + 2 * stride + VERTEX_X_OFFSET] = C.x;
+    vertices[start + 2 * stride + VERTEX_Y_OFFSET] = C.y;
+    vertices[start + 2 * stride + VERTEX_Z_OFFSET] = C.z;
 }
 
 void setupTriangles() {
@@ -88,11 +99,11 @@ void setupTriangles() {
   setTriangleColors(vertexData, 2 * FLOATS_PER_TRIANGLE, colorYellow, colorGreen, colorTurquesa);
 
   triangleCenterPoints[0] = Vec3{-0.5f , 0.0f, 0};
-  generateEquilateralTriangle(vertexData, 0, FLOATS_PER_VERTEX, triangleCenterPoints[0], .66f);
-  /*triangleCenterPoints[1] = Vec3{0.0f , 1.0f, 0};
-  generateEquilateralTriangle(vertexData, FLOATS_PER_VERTEX,  FLOATS_PER_VERTEX, triangleCenterPoints[1], .66f);
+  generateEquilateralTriangle(vertexData, FLOATS_PER_TRIANGLE,  FLOATS_PER_VERTEX, triangleCenterPoints[0], .66f);
+  triangleCenterPoints[1] = Vec3{0.0f , 1.0f, 0};
+  generateEquilateralTriangle(vertexData, 0, FLOATS_PER_VERTEX, triangleCenterPoints[1], .66f);
   triangleCenterPoints[2] = Vec3{0.5f , 0.0f, 0};
-  generateEquilateralTriangle(vertexData, 2 * FLOATS_PER_VERTEX, FLOATS_PER_VERTEX, triangleCenterPoints[2], .66f);*/
+  generateEquilateralTriangle(vertexData, 2 * FLOATS_PER_TRIANGLE, FLOATS_PER_VERTEX, triangleCenterPoints[2], .66f);
 }
   
   MyGLApp()
@@ -115,7 +126,7 @@ void setupTriangles() {
     GL(glUniformMatrix4fv(modelViewMatrixUniform, 1, GL_TRUE, modelView));
     
     GL(glBindVertexArray(vaos));
-    GL(glDrawArrays(GL_TRIANGLES, 0, sizeof(vertexData) / sizeof(vertexData[0]) / 3));
+    GL(glDrawArrays(GL_TRIANGLES, 0, NUM_TRIANGLES * VERTICIES_PER_TRIANGLE));
     GL(glBindVertexArray(0));
     GL(glUseProgram(0));
   }
@@ -173,7 +184,8 @@ void setupTriangles() {
   }
   
   void setupGeometry() {
-    const GLint vertexPos = glGetAttribLocation(program, "vertexPosition");
+    GL(glUseProgram(program));
+    const GLint vertexPosition = glGetAttribLocation(program, "vertexPosition");
     const GLint vertexColor = glGetAttribLocation(program, "vertexColor");
     
     GL(glGenVertexArrays(1, &vaos));
@@ -183,12 +195,13 @@ void setupTriangles() {
     GL(glBindBuffer(GL_ARRAY_BUFFER, vbos));
     GL(glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), vertexData, GL_STATIC_DRAW));
     
-    GL(glEnableVertexAttribArray(vertexPos));
-    GL(glVertexAttribPointer(vertexPos, FLOATS_PER_POINT, GL_FLOAT, FLOATS_PER_VERTEX, 0, (void*)0));
+    GL(glEnableVertexAttribArray(vertexPosition));
     GL(glEnableVertexAttribArray(vertexColor));
-    GL(glVertexAttribPointer(vertexColor, FLOATS_PER_COLOR, GL_FLOAT, FLOATS_PER_VERTEX, 0, (void*)0));
+    GL(glVertexAttribPointer(vertexPosition, FLOATS_PER_POINT, GL_FLOAT, GL_FALSE, FLOATS_PER_VERTEX * sizeof(GLfloat), (void*)0));
+    GL(glVertexAttribPointer(vertexColor, FLOATS_PER_COLOR, GL_FLOAT, GL_FALSE, FLOATS_PER_VERTEX * sizeof(GLfloat), (void*)(FLOATS_PER_POINT * sizeof(GLfloat))));
     
-    GL(glBindVertexArray(0););
+    GL(glBindVertexArray(0));
+    GL(glUseProgram(0));
   }
   
   virtual void keyboard(int key, int scancode, int action, int mods) override
