@@ -78,9 +78,9 @@ public:
   void generateEquilateralTriangle(GLfloat* vertices, size_t start, size_t stride, Vec3 center, float height, Vec3 eulerAngles){
     //Construction
     const float halfBase = height / std::sqrt(3.0f);
-    Vec3 Alocal = Vec3{ 0.0f,        height * 0.5f,  0.0f };
-    Vec3 Blocal = Vec3{ -halfBase,  -height * 0.5f,  0.0f };
-    Vec3 Clocal = Vec3{  halfBase,  -height * 0.5f,  0.0f };
+    Vec3 Alocal = Vec3{ 0.0f,        height * 2.0f/3.0f,  0.0f };
+    Vec3 Blocal = Vec3{ -halfBase,  -height * 1.0f/3.0f,  0.0f };
+    Vec3 Clocal = Vec3{  halfBase,  -height * 1.0f/3.0f,  0.0f };
     
     //Rotation
     const Mat4 Rx = {
