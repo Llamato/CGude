@@ -155,7 +155,7 @@ public:
     const Vec3 rimLightColor = convertHtmlColorToOpenGlColor("#F5A9B8");
 #endif
     const struct Light keyLight = {convertCatesianToPolar(Vec2{0.0f,4.0f}), keyLightColor};
-#if defined(SAUCE) && defined(EXTRA)
+#if defined(SAUCE) || defined(EXTRA)
     const struct Light fillLight = {{keyLight.position.radius, 0.0f}, fillLightColor};
     const struct Light rimLight = {{keyLight.position.radius, 0.0f}, rimLightColor};
     lights = {keyLight, fillLight, rimLight};
