@@ -35,6 +35,7 @@ public:
     Vec3 vertexColors[VERTICIES_PER_TRIANGLE];
   };
 
+#ifndef SAUCE
   const Vec3 colorRed = htmlColorToOpenGlColor("#FF0000");
   const Vec3 colorMagenta = htmlColorToOpenGlColor("#FF00FF");
   const Vec3 colorOrange = htmlColorToOpenGlColor("#FFAA00");
@@ -42,7 +43,17 @@ public:
   const Vec3 colorBlue = htmlColorToOpenGlColor("#0000FF");
   const Vec3 colorYellow = htmlColorToOpenGlColor("#FFFF00");
   const Vec3 colorGreen = htmlColorToOpenGlColor("#00FF00");
-  
+#endif
+#ifdef SAUCE
+  const Vec3 colorRed = htmlColorToOpenGlColor("#FFFFFF");
+  const Vec3 colorMagenta = htmlColorToOpenGlColor("#F5A9B8");
+  const Vec3 colorOrange = htmlColorToOpenGlColor("#5BCFFA");
+  const Vec3 colorTurquesa = htmlColorToOpenGlColor("#D42C00");
+  const Vec3 colorBlue = htmlColorToOpenGlColor("#FD9855");
+  const Vec3 colorYellow = htmlColorToOpenGlColor("#D161A2");
+  const Vec3 colorGreen = htmlColorToOpenGlColor("#A20161");
+#endif
+
   GLfloat vertexData[NUM_TRIANGLES * VERTICIES_PER_TRIANGLE * FLOATS_PER_VERTEX];
   TriangleAttributes triangleData[NUM_TRIANGLES] = {
     { Vec3{0.0f, 1.0f, 0},    Vec3{1.0f, 0.0f, 0.0f}, {colorRed, colorMagenta, colorOrange} },
